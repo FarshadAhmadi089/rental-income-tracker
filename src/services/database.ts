@@ -38,6 +38,7 @@ export const initDatabase = async (): Promise<void> => {
         mietanfang_datum TEXT NOT NULL,
         jahresmiete REAL NOT NULL,
         anmerkungen TEXT DEFAULT '',
+        termination_date TEXT DEFAULT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
@@ -63,6 +64,22 @@ export const initDatabase = async (): Promise<void> => {
       ON payments(mieter_id);
     `);
     console.log('✅ Index created');
+
+    // Migration: Add termination_date column if it doesn't exist
+    try {
+      const tableInfo = db.getAllSync<{ name: string }>(
+        "PRAGMA table_info(tenants)"
+      );
+      const hasTerminationDate = tableInfo.some((col: any) => col.name === 'termination_date');
+
+      if (!hasTerminationDate) {
+        console.log('🔄 Adding termination_date column to tenants table...');
+        db.execSync('ALTER TABLE tenants ADD COLUMN termination_date TEXT DEFAULT NULL');
+        console.log('✅ termination_date column added');
+      }
+    } catch (error) {
+      console.log('ℹ️ termination_date column already exists or migration not needed');
+    }
 
     // Verify tables exist
     const tables = db.getAllSync<{ name: string }>(
@@ -104,9 +121,9 @@ export const getTenantById = (id: number): Tenant | null => {
 export const createTenant = (tenant: TenantInput): number => {
   const db = getDatabase();
   const result = db.runSync(
-    `INSERT INTO tenants (name, mietanfang_datum, jahresmiete, anmerkungen)
-     VALUES (?, ?, ?, ?)`,
-    [tenant.name, tenant.mietanfang_datum, tenant.jahresmiete, tenant.anmerkungen]
+    `INSERT INTO tenants (name, mietanfang_datum, jahresmiete, anmerkungen, termination_date)
+     VALUES (?, ?, ?, ?, ?)`,
+    [tenant.name, tenant.mietanfang_datum, tenant.jahresmiete, tenant.anmerkungen, tenant.termination_date || null]
   );
   return result.lastInsertRowId;
 };
@@ -135,6 +152,10 @@ export const updateTenant = (id: number, tenant: Partial<TenantInput>): void => 
     fields.push('anmerkungen = ?');
     values.push(tenant.anmerkungen);
   }
+  if (tenant.termination_date !== undefined) {
+    fields.push('termination_date = ?');
+    values.push(tenant.termination_date);
+  }
 
   fields.push('updated_at = CURRENT_TIMESTAMP');
   values.push(id);
@@ -146,11 +167,18 @@ export const updateTenant = (id: number, tenant: Partial<TenantInput>): void => 
 };
 
 /**
- * Delete a tenant (and all associated payments via CASCADE)
+ * Delete a tenant permanently (and all associated payments via CASCADE)
+ * WARNING: This is irreversible. All tenant data and payment history will be permanently deleted.
  */
-export const deleteTenant = (id: number): void => {
+export const deleteTenantPermanently = (id: number): void => {
   const db = getDatabase();
+
+  // Foreign key constraints should handle cascade delete automatically
+  // But we'll explicitly delete payments first to be safe
+  db.runSync('DELETE FROM payments WHERE mieter_id = ?', [id]);
   db.runSync('DELETE FROM tenants WHERE id = ?', [id]);
+
+  console.log(`🗑️ Tenant ${id} and all associated payments permanently deleted`);
 };
 
 /**
@@ -184,4 +212,13 @@ export const createPayment = (payment: PaymentInput): number => {
 export const deletePayment = (id: number): void => {
   const db = getDatabase();
   db.runSync('DELETE FROM payments WHERE id = ?', [id]);
+};
+
+/**
+ * Get all payments (for global reports)
+ */
+export const getAllPayments = (): Payment[] => {
+  const db = getDatabase();
+  const result = db.getAllSync<Payment>('SELECT * FROM payments ORDER BY datum DESC');
+  return result;
 };

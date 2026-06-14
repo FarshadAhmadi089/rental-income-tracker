@@ -3,29 +3,78 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  SectionList,
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { getAllTenants } from '../services/database';
+import { getAllTenants, getAllPayments } from '../services/database';
 import { getAllTenantBalances, formatCurrency } from '../services/calculationService';
+import { calculateGlobalQuarterlyReport } from '../utils/rentCalculations';
+import { generateGlobalQuarterlyPDF } from '../services/globalReportPdfService';
 import type { TenantBalance } from '../services/calculationService';
+import type { Payment } from '../models';
 
 interface DashboardScreenProps {
   navigation: any;
 }
 
+interface TenantSection {
+  title: string;
+  data: TenantBalance[];
+}
+
 export default function DashboardScreen({ navigation }: DashboardScreenProps) {
-  const [balances, setBalances] = useState<TenantBalance[]>([]);
+  const [sections, setSections] = useState<TenantSection[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedQuarter, setSelectedQuarter] = useState(1);
 
   const loadData = useCallback(() => {
     try {
       const tenants = getAllTenants();
       const balancesData = getAllTenantBalances(tenants);
-      setBalances(balancesData);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Separate active and former tenants
+      const active: TenantBalance[] = [];
+      const former: TenantBalance[] = [];
+
+      balancesData.forEach(balance => {
+        if (!balance.tenant.termination_date) {
+          // No termination date = active
+          active.push(balance);
+        } else {
+          const terminationDate = new Date(balance.tenant.termination_date);
+          terminationDate.setHours(0, 0, 0, 0);
+
+          if (terminationDate >= today) {
+            // Termination date is today or future = active
+            active.push(balance);
+          } else {
+            // Termination date is in the past = former
+            former.push(balance);
+          }
+        }
+      });
+
+      const newSections: TenantSection[] = [];
+
+      if (active.length > 0) {
+        newSections.push({ title: 'Aktive Mieter', data: active });
+      }
+
+      if (former.length > 0) {
+        newSections.push({ title: 'Ehemalige Mieter', data: former });
+      }
+
+      setSections(newSections);
     } catch (error) {
       console.error('Error loading tenants:', error);
       Alert.alert('Fehler', 'Mieter konnten nicht geladen werden.');
@@ -47,6 +96,39 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
     setRefreshing(true);
     loadData();
     setRefreshing(false);
+  };
+
+  const handleGenerateGlobalReport = async () => {
+    try {
+      const tenants = getAllTenants();
+      const allPayments = getAllPayments();
+
+      if (tenants.length === 0) {
+        Alert.alert('No Tenants', 'Please add tenants first before generating a report.');
+        return;
+      }
+
+      const report = calculateGlobalQuarterlyReport(
+        tenants,
+        allPayments,
+        selectedYear,
+        selectedQuarter
+      );
+
+      if (report.tenants.length === 0) {
+        Alert.alert(
+          'No Activity',
+          'No tenants were active during the selected quarter.'
+        );
+        return;
+      }
+
+      setModalVisible(false);
+      await generateGlobalQuarterlyPDF(report);
+    } catch (error) {
+      console.error('Error generating global report:', error);
+      Alert.alert('Error', 'Failed to generate the global report.');
+    }
   };
 
   const renderTenantCard = ({ item }: { item: TenantBalance }) => {
@@ -93,16 +175,39 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
     );
   };
 
+  // Generate year options (last 5 years and next 2 years)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 8 }, (_, i) => currentYear - 5 + i);
+
+  // Calculate total tenants
+  const totalTenants = sections.reduce((sum, section) => sum + section.data.length, 0);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Mieteinnahmen</Text>
-        <Text style={styles.subtitle}>{balances.length} Mieter</Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.title}>Mieteinnahmen</Text>
+            <Text style={styles.subtitle}>{totalTenants} Mieter</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.reportButton}
+            onPress={() => setModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.reportButtonText}>📊 Bericht</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <FlatList
-        data={balances}
+      <SectionList
+        sections={sections}
         renderItem={renderTenantCard}
+        renderSectionHeader={({ section: { title } }) => (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionHeaderText}>{title}</Text>
+          </View>
+        )}
         keyExtractor={(item) => item.tenant.id.toString()}
         contentContainerStyle={styles.listContent}
         refreshControl={
@@ -125,6 +230,94 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
+
+      {/* Global Report Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Global Quarterly Report</Text>
+
+            <Text style={styles.inputLabel}>Lease Year</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.optionScrollView}
+            >
+              {yearOptions.map((year) => (
+                <TouchableOpacity
+                  key={year}
+                  style={[
+                    styles.optionButton,
+                    selectedYear === year && styles.optionButtonSelected,
+                  ]}
+                  onPress={() => setSelectedYear(year)}
+                >
+                  <Text
+                    style={[
+                      styles.optionButtonText,
+                      selectedYear === year && styles.optionButtonTextSelected,
+                    ]}
+                  >
+                    {year}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={styles.inputLabel}>Quarter</Text>
+            <View style={styles.quarterContainer}>
+              {[1, 2, 3, 4].map((q) => (
+                <TouchableOpacity
+                  key={q}
+                  style={[
+                    styles.quarterButton,
+                    selectedQuarter === q && styles.quarterButtonSelected,
+                  ]}
+                  onPress={() => setSelectedQuarter(q)}
+                >
+                  <Text
+                    style={[
+                      styles.quarterButtonText,
+                      selectedQuarter === q && styles.quarterButtonTextSelected,
+                    ]}
+                  >
+                    Q{q}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.quarterButtonSubtext,
+                      selectedQuarter === q && styles.quarterButtonTextSelected,
+                    ]}
+                  >
+                    {q === 1 ? 'Dec-Feb' : q === 2 ? 'Mar-May' : q === 3 ? 'Jun-Aug' : 'Sep-Nov'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.generateButton]}
+                onPress={handleGenerateGlobalReport}
+              >
+                <Text style={styles.generateButtonText}>Generate PDF</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -140,6 +333,22 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingHorizontal: 20,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  reportButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  reportButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -153,6 +362,20 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
     paddingBottom: 80,
+  },
+  sectionHeader: {
+    backgroundColor: '#F9FAFB',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  sectionHeaderText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#374151',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -256,5 +479,117 @@ const styles = StyleSheet.create({
     fontSize: 32,
     color: '#FFFFFF',
     fontWeight: '300',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  optionScrollView: {
+    flexGrow: 0,
+    marginBottom: 8,
+  },
+  optionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    marginRight: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  optionButtonSelected: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+  },
+  optionButtonText: {
+    fontSize: 16,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  optionButtonTextSelected: {
+    color: '#FFFFFF',
+  },
+  quarterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  quarterButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    marginRight: 8,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  quarterButtonSelected: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+  },
+  quarterButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  quarterButtonSubtext: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  quarterButtonTextSelected: {
+    color: '#FFFFFF',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+  },
+  cancelButtonText: {
+    color: '#6B7280',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  generateButton: {
+    backgroundColor: '#2563EB',
+  },
+  generateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

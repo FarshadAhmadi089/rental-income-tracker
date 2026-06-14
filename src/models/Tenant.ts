@@ -5,9 +5,10 @@
 export interface Tenant {
   id: number;
   name: string;
-  mietanfang_datum: string; // ISO date string (YYYY-MM-DD)
+  mietanfang_datum: string; // ISO date string (YYYY-MM-DD) - Move-in date
   jahresmiete: number; // Annual rent in euros
   anmerkungen: string; // Notes/comments
+  termination_date: string | null; // ISO date string (YYYY-MM-DD) - Move-out date (null if active)
   created_at?: string; // Timestamp
   updated_at?: string; // Timestamp
 }

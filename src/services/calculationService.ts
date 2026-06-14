@@ -14,27 +14,33 @@ export interface TenantBalance {
 }
 
 /**
- * Calculate the total rent due (Soll) from start date until today
+ * Calculate the total rent due (Soll) from start date until today (or termination date)
  *
  * Formula:
- * - Calculate months between start date and today
+ * - Calculate months between start date and end date (today or termination_date)
  * - For partial first month: calculate days/total_days_in_month ratio
  * - Total = (full_months * monthly_rate) + (partial_month_rent)
+ * - If tenant has termination_date, calculation stops at that date
  */
 export const calculateSoll = (tenant: Tenant): number => {
   const startDate = new Date(tenant.mietanfang_datum);
   const today = new Date();
 
+  // If tenant has terminated, use termination date as end date
+  const endDate = tenant.termination_date
+    ? new Date(tenant.termination_date)
+    : today;
+
   // Reset time to midnight for accurate day calculation
   startDate.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
+  endDate.setHours(0, 0, 0, 0);
 
   const monthlyRate = tenant.jahresmiete / 12;
 
   let totalDue = 0;
   let currentDate = new Date(startDate);
 
-  while (currentDate <= today) {
+  while (currentDate <= endDate) {
     const daysInMonth = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth() + 1,
@@ -45,23 +51,23 @@ export const calculateSoll = (tenant: Tenant): number => {
     const isFirstMonth = currentDate.getMonth() === startDate.getMonth() &&
                          currentDate.getFullYear() === startDate.getFullYear();
 
-    // Check if this is the current (partial) month
-    const isCurrentMonth = currentDate.getMonth() === today.getMonth() &&
-                           currentDate.getFullYear() === today.getFullYear();
+    // Check if this is the end (partial) month
+    const isEndMonth = currentDate.getMonth() === endDate.getMonth() &&
+                       currentDate.getFullYear() === endDate.getFullYear();
 
-    if (isFirstMonth && isCurrentMonth) {
-      // Both first and current month (same month)
-      const daysInPeriod = today.getDate() - startDate.getDate() + 1;
+    if (isFirstMonth && isEndMonth) {
+      // Both first and end month (same month)
+      const daysInPeriod = endDate.getDate() - startDate.getDate() + 1;
       totalDue += (monthlyRate / daysInMonth) * daysInPeriod;
       break;
     } else if (isFirstMonth) {
       // First month (partial)
       const daysFromStart = daysInMonth - startDate.getDate() + 1;
       totalDue += (monthlyRate / daysInMonth) * daysFromStart;
-    } else if (isCurrentMonth) {
-      // Current month (partial)
-      const daysUntilToday = today.getDate();
-      totalDue += (monthlyRate / daysInMonth) * daysUntilToday;
+    } else if (isEndMonth) {
+      // End month (partial)
+      const daysUntilEnd = endDate.getDate();
+      totalDue += (monthlyRate / daysInMonth) * daysUntilEnd;
       break;
     } else {
       // Full month
