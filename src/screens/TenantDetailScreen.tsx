@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   Modal,
   TextInput,
@@ -14,7 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getTenantById, getPaymentsByTenantId, createPayment, deletePayment } from '../services/database';
 import { getTenantBalance, formatCurrency, formatDate } from '../services/calculationService';
 import { generateTenantPDF } from '../services/pdfService';
-import { Tenant, Payment, PaymentInput } from '../models';
+import type { Tenant, Payment, PaymentInput } from '../models';
 
 interface TenantDetailScreenProps {
   route: any;

@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
-import { Tenant, TenantInput } from '../models/Tenant';
-import { Payment, PaymentInput } from '../models/Payment';
+import type { Tenant, TenantInput } from '../models/Tenant';
+import type { Payment, PaymentInput } from '../models/Payment';
 
 const DB_NAME = 'rental_income.db';
 

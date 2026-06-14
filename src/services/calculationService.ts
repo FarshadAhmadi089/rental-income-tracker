@@ -1,5 +1,5 @@
-import { Tenant } from '../models/Tenant';
-import { Payment } from '../models/Payment';
+import type { Tenant } from '../models/Tenant';
+import type { Payment } from '../models/Payment';
 import { getPaymentsByTenantId } from './database';
 
 /**

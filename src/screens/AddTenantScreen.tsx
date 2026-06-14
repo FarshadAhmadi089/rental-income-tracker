@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { createTenant } from '../services/database';
-import { TenantInput } from '../models';
+import type { TenantInput } from '../models';
 
 interface AddTenantScreenProps {
   navigation: any;

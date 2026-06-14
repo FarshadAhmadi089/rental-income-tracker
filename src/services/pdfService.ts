@@ -1,6 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { Tenant, Payment } from '../models';
+import type { Tenant, Payment } from '../models';
 import { getTenantBalance, formatCurrency, formatDate } from './calculationService';
 
 /**

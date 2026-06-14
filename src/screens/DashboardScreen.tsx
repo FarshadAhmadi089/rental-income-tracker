@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getAllTenants } from '../services/database';
-import { getAllTenantBalances, formatCurrency, TenantBalance } from '../services/calculationService';
+import { getAllTenantBalances, formatCurrency } from '../services/calculationService';
+import type { TenantBalance } from '../services/calculationService';
 
 interface DashboardScreenProps {
   navigation: any;
