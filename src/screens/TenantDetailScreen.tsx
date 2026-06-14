@@ -42,7 +42,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
     try {
       const tenantData = getTenantById(tenantId);
       if (!tenantData) {
-        Alert.alert('Fehler', 'Mieter nicht gefunden');
+        Alert.alert('Error', 'Tenant not found');
         navigation.goBack();
         return;
       }
@@ -56,7 +56,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
       setFiscalYearsData(fiscalData);
     } catch (error) {
       console.error('Error loading tenant details:', error);
-      Alert.alert('Fehler', 'Daten konnten nicht geladen werden.');
+      Alert.alert('Error', 'Failed to load data.');
     }
   }, [tenantId, navigation]);
 
@@ -72,7 +72,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
 
   const handleAddPayment = () => {
     if (!newPayment.betrag || parseFloat(newPayment.betrag) <= 0) {
-      Alert.alert('Fehler', 'Bitte geben Sie einen gültigen Betrag ein.');
+      Alert.alert('Error', 'Please enter a valid amount.');
       return;
     }
 
@@ -90,28 +90,28 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
         datum: new Date().toISOString().split('T')[0],
       });
       loadData();
-      Alert.alert('Erfolg', 'Zahlung wurde erfasst.');
+      Alert.alert('Success', 'Payment was recorded.');
     } catch (error) {
       console.error('Error adding payment:', error);
-      Alert.alert('Fehler', 'Zahlung konnte nicht erfasst werden.');
+      Alert.alert('Error', 'Failed to record payment.');
     }
   };
 
   const handleDeletePayment = (paymentId: number) => {
     Alert.alert(
-      'Zahlung löschen',
-      'Möchten Sie diese Zahlung wirklich löschen?',
+      'Delete Payment',
+      'Do you really want to delete this payment?',
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Löschen',
+          text: 'Delete',
           style: 'destructive',
           onPress: () => {
             try {
               deletePayment(paymentId);
               loadData();
             } catch (error) {
-              Alert.alert('Fehler', 'Zahlung konnte nicht gelöscht werden.');
+              Alert.alert('Error', 'Failed to delete payment.');
             }
           },
         },
@@ -126,7 +126,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
       await generateTenantPDF(tenant, payments);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      Alert.alert('Fehler', 'PDF konnte nicht erstellt werden.');
+      Alert.alert('Error', 'Failed to create PDF.');
     }
   };
 
@@ -142,7 +142,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
     if (!tenant) return;
 
     if (!terminationDate) {
-      Alert.alert('Fehler', 'Bitte geben Sie ein Datum ein.');
+      Alert.alert('Error', 'Please enter a date.');
       return;
     }
 
@@ -150,10 +150,10 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
       updateTenant(tenantId, { termination_date: terminationDate });
       setTerminationModalVisible(false);
       loadData();
-      Alert.alert('Erfolg', 'Kündigungsdatum wurde gespeichert.');
+      Alert.alert('Success', 'Termination date was saved.');
     } catch (error) {
       console.error('Error setting termination date:', error);
-      Alert.alert('Fehler', 'Kündigungsdatum konnte nicht gespeichert werden.');
+      Alert.alert('Error', 'Failed to save termination date.');
     }
   };
 
@@ -161,20 +161,20 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
     if (!tenant) return;
 
     Alert.alert(
-      'Kündigung entfernen',
-      'Möchten Sie das Kündigungsdatum wirklich entfernen?',
+      'Remove Termination',
+      'Do you really want to remove the termination date?',
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Entfernen',
+          text: 'Remove',
           style: 'destructive',
           onPress: () => {
             try {
               updateTenant(tenantId, { termination_date: null });
               loadData();
-              Alert.alert('Erfolg', 'Kündigungsdatum wurde entfernt.');
+              Alert.alert('Success', 'Termination date was removed.');
             } catch (error) {
-              Alert.alert('Fehler', 'Kündigungsdatum konnte nicht entfernt werden.');
+              Alert.alert('Error', 'Failed to remove termination date.');
             }
           },
         },
@@ -186,17 +186,17 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
     if (!tenant) return;
 
     Alert.alert(
-      'Mieter löschen',
-      `Möchten Sie ${tenant.name} wirklich dauerhaft löschen?\n\nDies löscht den Mieter und alle Zahlungen unwiderruflich.`,
+      'Delete Tenant',
+      `Do you really want to permanently delete ${tenant.name}?\n\nThis will delete the tenant and all payments irreversibly.`,
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Dauerhaft löschen',
+          text: 'Permanently Delete',
           style: 'destructive',
           onPress: () => {
             try {
               deleteTenantPermanently(tenantId);
-              Alert.alert('Erfolg', 'Mieter wurde dauerhaft gelöscht.', [
+              Alert.alert('Success', 'Tenant was permanently deleted.', [
                 {
                   text: 'OK',
                   onPress: () => navigation.navigate('Dashboard'),
@@ -204,7 +204,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
               ]);
             } catch (error) {
               console.error('Error deleting tenant:', error);
-              Alert.alert('Fehler', 'Mieter konnte nicht gelöscht werden.');
+              Alert.alert('Error', 'Failed to delete tenant.');
             }
           },
         },
@@ -446,7 +446,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Neue Zahlung</Text>
 
-            <Text style={styles.inputLabel}>Betrag (€)</Text>
+            <Text style={styles.inputLabel}>Betrag (AED)</Text>
             <TextInput
               style={styles.input}
               placeholder="0.00"

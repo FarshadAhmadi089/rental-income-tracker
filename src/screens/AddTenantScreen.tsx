@@ -28,30 +28,30 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
   const handleSave = () => {
     // Validation
     if (!formData.name.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie einen Namen ein.');
+      Alert.alert('Error', 'Please enter a name.');
       return;
     }
 
     if (!formData.mietanfang_datum) {
-      Alert.alert('Fehler', 'Bitte geben Sie ein Startdatum ein.');
+      Alert.alert('Error', 'Please enter a start date.');
       return;
     }
 
     if (formData.jahresmiete <= 0) {
-      Alert.alert('Fehler', 'Bitte geben Sie eine gültige Jahresmiete ein.');
+      Alert.alert('Error', 'Please enter a valid annual rent.');
       return;
     }
 
     // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(formData.mietanfang_datum)) {
-      Alert.alert('Fehler', 'Datum muss im Format YYYY-MM-DD sein.');
+      Alert.alert('Error', 'Date must be in YYYY-MM-DD format.');
       return;
     }
 
     try {
       createTenant(formData);
-      Alert.alert('Erfolg', 'Mieter wurde erfolgreich hinzugefügt.', [
+      Alert.alert('Success', 'Tenant was successfully added.', [
         {
           text: 'OK',
           onPress: () => navigation.goBack(),
@@ -59,7 +59,7 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
       ]);
     } catch (error) {
       console.error('Error creating tenant:', error);
-      Alert.alert('Fehler', 'Mieter konnte nicht erstellt werden.');
+      Alert.alert('Error', 'Tenant could not be created.');
     }
   };
 
@@ -70,9 +70,9 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Abbrechen</Text>
+          <Text style={styles.backButtonText}>← Cancel</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Neuer Mieter</Text>
+        <Text style={styles.title}>New Tenant</Text>
       </View>
 
       <ScrollView style={styles.content}>
@@ -81,17 +81,17 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
             <Text style={styles.label}>Name *</Text>
             <TextInput
               style={styles.input}
-              placeholder="z.B. Max Mustermann"
+              placeholder="e.g. John Doe"
               value={formData.name}
               onChangeText={(text) => setFormData({ ...formData, name: text })}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Mietbeginn *</Text>
+            <Text style={styles.label}>Move-in Date *</Text>
             <TextInput
               style={styles.input}
-              placeholder="YYYY-MM-DD (z.B. 2024-01-01)"
+              placeholder="YYYY-MM-DD (e.g. 2024-01-01)"
               value={formData.mietanfang_datum}
               onChangeText={(text) => setFormData({ ...formData, mietanfang_datum: text })}
             />
@@ -99,10 +99,10 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Jahresmiete (€) *</Text>
+            <Text style={styles.label}>Annual Rent (AED) *</Text>
             <TextInput
               style={styles.input}
-              placeholder="z.B. 12000"
+              placeholder="e.g. 12000"
               keyboardType="decimal-pad"
               value={formData.jahresmiete ? String(formData.jahresmiete) : ''}
               onChangeText={(text) => {
@@ -111,15 +111,15 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
               }}
             />
             <Text style={styles.hint}>
-              Monatliche Rate: €{(formData.jahresmiete / 12).toFixed(2)}
+              Monthly Rate: AED {(formData.jahresmiete / 12).toFixed(2)}
             </Text>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Anmerkungen</Text>
+            <Text style={styles.label}>Notes</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Optionale Notizen..."
+              placeholder="Optional notes..."
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -136,7 +136,7 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
           onPress={handleSave}
           activeOpacity={0.8}
         >
-          <Text style={styles.saveButtonText}>Mieter hinzufügen</Text>
+          <Text style={styles.saveButtonText}>Add Tenant</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

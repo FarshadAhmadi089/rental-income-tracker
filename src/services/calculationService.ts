@@ -126,12 +126,12 @@ export const getAllTenantBalances = (tenants: Tenant[]): TenantBalance[] => {
 };
 
 /**
- * Format currency for display (EUR)
+ * Format currency for display (AED)
  */
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('de-DE', {
+  return new Intl.NumberFormat('en-AE', {
     style: 'currency',
-    currency: 'EUR',
+    currency: 'AED',
   }).format(amount);
 };
 

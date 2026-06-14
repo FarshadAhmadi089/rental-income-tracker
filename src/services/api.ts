@@ -243,6 +243,27 @@ export const userAPI = {
   deleteUser: async (userId: string) => {
     await api.delete(`/api/users/${userId}`);
   },
+
+  /**
+   * Change own password (All users)
+   */
+  changeOwnPassword: async (currentPassword: string, newPassword: string) => {
+    const response = await api.patch('/api/users/me/password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+    return response.data;
+  },
+
+  /**
+   * Change any user's password (Admin only)
+   */
+  changeUserPassword: async (userId: string, newPassword: string) => {
+    const response = await api.patch(`/api/users/${userId}/password`, {
+      new_password: newPassword,
+    });
+    return response.data;
+  },
 };
 
 /**

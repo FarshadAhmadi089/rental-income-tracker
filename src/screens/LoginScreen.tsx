@@ -24,7 +24,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Fehler', 'Bitte E-Mail und Passwort eingeben');
+      Alert.alert('Error', 'Please enter email and password');
       return;
     }
 
@@ -34,19 +34,11 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       await login(email, password);
       // Navigation happens automatically via AuthContext state change
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Login fehlgeschlagen';
-      Alert.alert('Login Fehler', message);
+      const message = error instanceof Error ? error.message : 'Login failed';
+      Alert.alert('Login Error', message);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const showTestAccounts = () => {
-    Alert.alert(
-      'Test-Accounts',
-      'Admin: admin@test.com\nRent Collector: collector@test.com\nSpectator: spectator@test.com\n\nPasswort: beliebig (wird ignoriert)',
-      [{ text: 'OK' }]
-    );
   };
 
   return (
@@ -60,15 +52,15 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       >
         <View style={styles.header}>
           <Text style={styles.title}>Rental Income Tracker</Text>
-          <Text style={styles.subtitle}>Willkommen zurück</Text>
+          <Text style={styles.subtitle}>Welcome back</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>E-Mail</Text>
+            <Text style={styles.label}>Email</Text>
             <TextInput
               style={styles.input}
-              placeholder="ihre.email@beispiel.com"
+              placeholder="your.email@example.com"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -78,7 +70,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Passwort</Text>
+            <Text style={styles.label}>Password</Text>
             <TextInput
               style={styles.input}
               placeholder="••••••••"
@@ -96,23 +88,15 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             activeOpacity={0.8}
           >
             <Text style={styles.loginButtonText}>
-              {isLoading ? 'Anmeldung...' : 'Anmelden'}
+              {isLoading ? 'Logging in...' : 'Login'}
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.testAccountsButton}
-            onPress={showTestAccounts}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.testAccountsText}>🔑 Test-Accounts anzeigen</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Noch kein Account?</Text>
+          <Text style={styles.footerText}>No account yet?</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.footerLink}>Registrieren</Text>
+            <Text style={styles.footerLink}>Register</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -181,15 +165,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-  },
-  testAccountsButton: {
-    marginTop: 16,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  testAccountsText: {
-    color: '#6B7280',
-    fontSize: 14,
   },
   footer: {
     flexDirection: 'row',

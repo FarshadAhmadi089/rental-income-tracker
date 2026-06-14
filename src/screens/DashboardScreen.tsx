@@ -9,6 +9,8 @@ import {
   Alert,
   Modal,
   ScrollView,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,6 +18,7 @@ import { getAllTenants, getAllPayments } from '../services/database';
 import { getAllTenantBalances, formatCurrency } from '../services/calculationService';
 import { calculateGlobalQuarterlyReport } from '../utils/rentCalculations';
 import { generateGlobalQuarterlyPDF } from '../services/globalReportPdfService';
+import { userAPI } from '../services/api';
 import type { TenantBalance } from '../services/calculationService';
 import type { Payment } from '../models';
 
@@ -35,6 +38,13 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedQuarter, setSelectedQuarter] = useState(1);
+
+  // Password change modal state
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const loadData = useCallback(() => {
     try {
@@ -69,17 +79,17 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       const newSections: TenantSection[] = [];
 
       if (active.length > 0) {
-        newSections.push({ title: 'Aktive Mieter', data: active });
+        newSections.push({ title: 'Active Tenants', data: active });
       }
 
       if (former.length > 0) {
-        newSections.push({ title: 'Ehemalige Mieter', data: former });
+        newSections.push({ title: 'Former Tenants', data: former });
       }
 
       setSections(newSections);
     } catch (error) {
       console.error('Error loading tenants:', error);
-      Alert.alert('Fehler', 'Mieter konnten nicht geladen werden.');
+      Alert.alert('Error', 'Failed to load tenants.');
     }
   }, []);
 
@@ -98,6 +108,42 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
     setRefreshing(true);
     loadData();
     setRefreshing(false);
+  };
+
+  const handleChangePassword = async () => {
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'New password must be at least 6 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'New passwords do not match');
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      await userAPI.changeOwnPassword(currentPassword, newPassword);
+      Alert.alert('Success', 'Password changed successfully');
+
+      // Close modal and reset fields
+      setPasswordModalVisible(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to change password';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleGenerateGlobalReport = async () => {
@@ -135,7 +181,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 
   const renderTenantCard = ({ item }: { item: TenantBalance }) => {
     const saldoColor = item.saldo > 0 ? '#EF4444' : item.saldo < 0 ? '#10B981' : '#6B7280';
-    const saldoText = item.saldo > 0 ? 'Rückstand' : item.saldo < 0 ? 'Guthaben' : 'Ausgeglichen';
+    const saldoText = item.saldo > 0 ? 'Overdue' : item.saldo < 0 ? 'Credit' : 'Balanced';
 
     return (
       <TouchableOpacity
@@ -152,22 +198,22 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 
         <View style={styles.cardBody}>
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Monatliche Rate:</Text>
+            <Text style={styles.label}>Monthly Rate:</Text>
             <Text style={styles.value}>{formatCurrency(item.monatlicheRate)}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Soll (gesamt):</Text>
+            <Text style={styles.label}>Expected (total):</Text>
             <Text style={styles.value}>{formatCurrency(item.soll)}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Ist (bezahlt):</Text>
+            <Text style={styles.label}>Actual (paid):</Text>
             <Text style={styles.value}>{formatCurrency(item.ist)}</Text>
           </View>
 
           <View style={[styles.infoRow, styles.saldoRow]}>
-            <Text style={styles.labelBold}>Saldo:</Text>
+            <Text style={styles.labelBold}>Balance:</Text>
             <Text style={[styles.valueBold, { color: saldoColor }]}>
               {formatCurrency(Math.abs(item.saldo))}
             </Text>
@@ -206,6 +252,13 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
               </TouchableOpacity>
             )}
             <TouchableOpacity
+              style={styles.passwordButton}
+              onPress={() => setPasswordModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.passwordButtonText}>🔐</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={styles.logoutButton}
               onPress={logout}
               activeOpacity={0.7}
@@ -218,15 +271,15 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
         {/* Title & Report Button */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.title}>Mieteinnahmen</Text>
-            <Text style={styles.subtitle}>{totalTenants} Mieter</Text>
+            <Text style={styles.title}>Rental Income</Text>
+            <Text style={styles.subtitle}>{totalTenants} Tenants</Text>
           </View>
           <TouchableOpacity
             style={styles.reportButton}
             onPress={() => setModalVisible(true)}
             activeOpacity={0.7}
           >
-            <Text style={styles.reportButtonText}>📊 Bericht</Text>
+            <Text style={styles.reportButtonText}>📊 Report</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -246,9 +299,9 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Keine Mieter vorhanden</Text>
+            <Text style={styles.emptyText}>No tenants available</Text>
             <Text style={styles.emptySubtext}>
-              Füge deinen ersten Mieter hinzu
+              Add your first tenant
             </Text>
           </View>
         }
@@ -352,6 +405,80 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
           </View>
         </View>
       </Modal>
+
+      {/* Password Change Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={passwordModalVisible}
+        onRequestClose={() => setPasswordModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Change Password</Text>
+
+            <Text style={styles.inputLabel}>Current Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter current password"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              editable={!isChangingPassword}
+            />
+
+            <Text style={styles.inputLabel}>New Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="At least 6 characters"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              editable={!isChangingPassword}
+            />
+
+            <Text style={styles.inputLabel}>Confirm New Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Re-enter new password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              editable={!isChangingPassword}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setPasswordModalVisible(false);
+                  setCurrentPassword('');
+                  setNewPassword('');
+                  setConfirmPassword('');
+                }}
+                disabled={isChangingPassword}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.generateButton]}
+                onPress={handleChangePassword}
+                disabled={isChangingPassword}
+              >
+                {isChangingPassword ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.generateButtonText}>Change Password</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -398,6 +525,15 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   teamButtonText: {
+    fontSize: 18,
+  },
+  passwordButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  passwordButtonText: {
     fontSize: 18,
   },
   logoutButton: {
@@ -584,6 +720,16 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 8,
     marginTop: 16,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#111827',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 8,
   },
   optionScrollView: {
     flexGrow: 0,

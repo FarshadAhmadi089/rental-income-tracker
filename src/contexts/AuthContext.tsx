@@ -1,11 +1,22 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { jwtDecode } from 'jwt-decode';
 import { authAPI, userAPI } from '../services/api';
 
 /**
  * User Roles for RBAC (Role-Based Access Control)
  */
 export type UserRole = 'admin' | 'rent_collector' | 'spectator';
+
+/**
+ * JWT Token Payload Interface
+ */
+interface JWTPayload {
+  sub: string; // email
+  role: UserRole;
+  exp: number;
+  type: string;
+}
 
 /**
  * User Interface
@@ -86,21 +97,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await AsyncStorage.setItem('access_token', access_token);
       await AsyncStorage.setItem('refresh_token', refresh_token);
 
-      // Decode token to get user info (or fetch from backend)
-      // For now, we'll create a simple user object from the email
-      // You may want to add a /me endpoint to fetch full user details
+      // Decode JWT token to extract user info
+      console.log('🔓 AuthContext: Decoding JWT token...');
+      const decodedToken = jwtDecode<JWTPayload>(access_token);
+      console.log('✅ AuthContext: Token decoded:', {
+        email: decodedToken.sub,
+        role: decodedToken.role,
+        exp: new Date(decodedToken.exp * 1000).toISOString(),
+      });
+
+      // Create user object from decoded token
       const userData: User = {
-        id: email, // Temporary - replace with actual user ID from backend
-        email: email,
-        role: 'admin', // Temporary - should come from backend
-        name: email.split('@')[0],
+        id: decodedToken.sub, // Use email as ID for now
+        email: decodedToken.sub,
+        role: decodedToken.role, // Role from JWT token
+        name: decodedToken.sub.split('@')[0],
       };
 
       // Store user data
       await AsyncStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
 
-      console.log('✅ AuthContext: Login complete, user data stored');
+      console.log('✅ AuthContext: Login complete, user data stored with role:', userData.role);
     } catch (error: any) {
       console.error('❌ AuthContext: Login error:', {
         message: error.message,

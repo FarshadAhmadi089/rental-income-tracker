@@ -24,17 +24,17 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Fehler', 'Bitte alle Felder ausfüllen');
+      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Fehler', 'Passwörter stimmen nicht überein');
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Fehler', 'Passwort muss mindestens 6 Zeichen lang sein');
+      Alert.alert('Error', 'Password must be at least 6 characters long');
       return;
     }
 
@@ -44,11 +44,11 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
     setTimeout(() => {
       setIsLoading(false);
       Alert.alert(
-        'Registrierung',
-        'Die Registrierung ist derzeit deaktiviert.\n\nNeue Benutzer können nur von Admins über die Team-Verwaltung eingeladen werden.',
+        'Registration',
+        'Registration is currently disabled.\n\nNew users can only be invited by admins through the Team Management.',
         [
           {
-            text: 'Zum Login',
+            text: 'Go to Login',
             onPress: () => navigation.navigate('Login'),
           },
         ]
@@ -66,9 +66,9 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Neuen Account erstellen</Text>
+          <Text style={styles.title}>Create New Account</Text>
           <Text style={styles.subtitle}>
-            Hinweis: Neue Accounts müssen von einem Admin freigegeben werden
+            Note: New accounts must be approved by an admin
           </Text>
         </View>
 
@@ -77,7 +77,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             <Text style={styles.label}>Name</Text>
             <TextInput
               style={styles.input}
-              placeholder="Ihr Name"
+              placeholder="Your name"
               value={name}
               onChangeText={setName}
               autoCapitalize="words"
@@ -85,10 +85,10 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>E-Mail</Text>
+            <Text style={styles.label}>Email</Text>
             <TextInput
               style={styles.input}
-              placeholder="ihre.email@beispiel.com"
+              placeholder="your.email@example.com"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -98,10 +98,10 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Passwort</Text>
+            <Text style={styles.label}>Password</Text>
             <TextInput
               style={styles.input}
-              placeholder="Mindestens 6 Zeichen"
+              placeholder="At least 6 characters"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -110,10 +110,10 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Passwort bestätigen</Text>
+            <Text style={styles.label}>Confirm Password</Text>
             <TextInput
               style={styles.input}
-              placeholder="Passwort wiederholen"
+              placeholder="Repeat password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
@@ -128,15 +128,15 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             activeOpacity={0.8}
           >
             <Text style={styles.registerButtonText}>
-              {isLoading ? 'Registrierung...' : 'Registrieren'}
+              {isLoading ? 'Registering...' : 'Register'}
             </Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Haben Sie bereits einen Account?</Text>
+          <Text style={styles.footerText}>Already have an account?</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.footerLink}>Anmelden</Text>
+            <Text style={styles.footerLink}>Login</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
