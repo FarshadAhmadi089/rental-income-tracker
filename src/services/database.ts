@@ -4,58 +4,87 @@ import { Payment, PaymentInput } from '../models/Payment';
 
 const DB_NAME = 'rental_income.db';
 
+// Global database instance
+let dbInstance: SQLite.SQLiteDatabase | null = null;
+
 /**
- * Initialize and open the SQLite database
+ * Get or create the database instance
  */
-export const openDatabase = () => {
-  return SQLite.openDatabaseSync(DB_NAME);
+const getDatabase = (): SQLite.SQLiteDatabase => {
+  if (!dbInstance) {
+    dbInstance = SQLite.openDatabaseSync(DB_NAME);
+  }
+  return dbInstance;
 };
 
 /**
- * Initialize database tables
+ * Initialize database tables - MUST be called before any database operations
+ * Returns a Promise that resolves when initialization is complete
  */
-export const initDatabase = () => {
-  const db = openDatabase();
+export const initDatabase = async (): Promise<void> => {
+  try {
+    console.log('🔄 Initializing database...');
+    const db = getDatabase();
 
-  // Create Tenants table
-  db.execSync(`
-    CREATE TABLE IF NOT EXISTS tenants (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      mietanfang_datum TEXT NOT NULL,
-      jahresmiete REAL NOT NULL,
-      anmerkungen TEXT DEFAULT '',
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    // Enable foreign key constraints
+    db.execSync('PRAGMA foreign_keys = ON;');
+    console.log('✅ Foreign keys enabled');
+
+    // Create Tenants table
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS tenants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        mietanfang_datum TEXT NOT NULL,
+        jahresmiete REAL NOT NULL,
+        anmerkungen TEXT DEFAULT '',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✅ Tenants table created');
+
+    // Create Payments table
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mieter_id INTEGER NOT NULL,
+        datum TEXT NOT NULL,
+        betrag REAL NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (mieter_id) REFERENCES tenants(id) ON DELETE CASCADE
+      );
+    `);
+    console.log('✅ Payments table created');
+
+    // Create index on mieter_id for faster queries
+    db.execSync(`
+      CREATE INDEX IF NOT EXISTS idx_payments_mieter_id
+      ON payments(mieter_id);
+    `);
+    console.log('✅ Index created');
+
+    // Verify tables exist
+    const tables = db.getAllSync<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('tenants', 'payments')"
     );
-  `);
 
-  // Create Payments table
-  db.execSync(`
-    CREATE TABLE IF NOT EXISTS payments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      mieter_id INTEGER NOT NULL,
-      datum TEXT NOT NULL,
-      betrag REAL NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (mieter_id) REFERENCES tenants(id) ON DELETE CASCADE
-    );
-  `);
+    if (tables.length !== 2) {
+      throw new Error(`Expected 2 tables, found ${tables.length}`);
+    }
 
-  // Create index on mieter_id for faster queries
-  db.execSync(`
-    CREATE INDEX IF NOT EXISTS idx_payments_mieter_id
-    ON payments(mieter_id);
-  `);
-
-  console.log('✅ Database initialized successfully');
+    console.log('✅ Database initialized successfully - All tables verified');
+  } catch (error) {
+    console.error('❌ Database initialization failed:', error);
+    throw error;
+  }
 };
 
 /**
  * Get all tenants
  */
 export const getAllTenants = (): Tenant[] => {
-  const db = openDatabase();
+  const db = getDatabase();
   const result = db.getAllSync<Tenant>('SELECT * FROM tenants ORDER BY name ASC');
   return result;
 };
@@ -64,7 +93,7 @@ export const getAllTenants = (): Tenant[] => {
  * Get a single tenant by ID
  */
 export const getTenantById = (id: number): Tenant | null => {
-  const db = openDatabase();
+  const db = getDatabase();
   const result = db.getFirstSync<Tenant>('SELECT * FROM tenants WHERE id = ?', [id]);
   return result || null;
 };
@@ -73,7 +102,7 @@ export const getTenantById = (id: number): Tenant | null => {
  * Create a new tenant
  */
 export const createTenant = (tenant: TenantInput): number => {
-  const db = openDatabase();
+  const db = getDatabase();
   const result = db.runSync(
     `INSERT INTO tenants (name, mietanfang_datum, jahresmiete, anmerkungen)
      VALUES (?, ?, ?, ?)`,
@@ -86,7 +115,7 @@ export const createTenant = (tenant: TenantInput): number => {
  * Update a tenant
  */
 export const updateTenant = (id: number, tenant: Partial<TenantInput>): void => {
-  const db = openDatabase();
+  const db = getDatabase();
   const fields: string[] = [];
   const values: any[] = [];
 
@@ -120,7 +149,7 @@ export const updateTenant = (id: number, tenant: Partial<TenantInput>): void => 
  * Delete a tenant (and all associated payments via CASCADE)
  */
 export const deleteTenant = (id: number): void => {
-  const db = openDatabase();
+  const db = getDatabase();
   db.runSync('DELETE FROM tenants WHERE id = ?', [id]);
 };
 
@@ -128,7 +157,7 @@ export const deleteTenant = (id: number): void => {
  * Get all payments for a specific tenant
  */
 export const getPaymentsByTenantId = (mieter_id: number): Payment[] => {
-  const db = openDatabase();
+  const db = getDatabase();
   const result = db.getAllSync<Payment>(
     'SELECT * FROM payments WHERE mieter_id = ? ORDER BY datum DESC',
     [mieter_id]
@@ -140,7 +169,7 @@ export const getPaymentsByTenantId = (mieter_id: number): Payment[] => {
  * Create a new payment
  */
 export const createPayment = (payment: PaymentInput): number => {
-  const db = openDatabase();
+  const db = getDatabase();
   const result = db.runSync(
     `INSERT INTO payments (mieter_id, datum, betrag)
      VALUES (?, ?, ?)`,
@@ -153,6 +182,6 @@ export const createPayment = (payment: PaymentInput): number => {
  * Delete a payment
  */
 export const deletePayment = (id: number): void => {
-  const db = openDatabase();
+  const db = getDatabase();
   db.runSync('DELETE FROM payments WHERE id = ?', [id]);
 };
