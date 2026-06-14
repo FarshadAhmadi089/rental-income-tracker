@@ -215,7 +215,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
   if (!tenant || !balance) {
     return (
       <View style={styles.container}>
-        <Text>Laden...</Text>
+        <Text>Loading...</Text>
       </View>
     );
   }
@@ -228,41 +228,41 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← Zurück</Text>
+            <Text style={styles.backButtonText}>← Back</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleGeneratePDF} style={styles.pdfButton}>
             <Text style={styles.pdfButtonText}>📄 PDF</Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.title}>{tenant.name}</Text>
-        <Text style={styles.subtitle}>Seit {formatDate(tenant.mietanfang_datum)}</Text>
+        <Text style={styles.subtitle}>Since {formatDate(tenant.mietanfang_datum)}</Text>
       </View>
 
       <ScrollView style={styles.content}>
         {/* Balance Card */}
         <View style={styles.balanceCard}>
           <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>Monatliche Rate:</Text>
+            <Text style={styles.balanceLabel}>Monthly Rate:</Text>
             <Text style={styles.balanceValue}>{formatCurrency(balance.monatlicheRate)}</Text>
           </View>
 
           <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>Jahresmiete:</Text>
+            <Text style={styles.balanceLabel}>Annual Rent:</Text>
             <Text style={styles.balanceValue}>{formatCurrency(tenant.jahresmiete)}</Text>
           </View>
 
           <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>Soll (gesamt):</Text>
+            <Text style={styles.balanceLabel}>Expected (total):</Text>
             <Text style={styles.balanceValue}>{formatCurrency(balance.soll)}</Text>
           </View>
 
           <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>Ist (bezahlt):</Text>
+            <Text style={styles.balanceLabel}>Actual (paid):</Text>
             <Text style={styles.balanceValue}>{formatCurrency(balance.ist)}</Text>
           </View>
 
           <View style={[styles.balanceRow, styles.saldoRow]}>
-            <Text style={styles.saldoLabel}>Saldo:</Text>
+            <Text style={styles.saldoLabel}>Balance:</Text>
             <Text style={[styles.saldoValue, { color: saldoColor }]}>
               {formatCurrency(Math.abs(balance.saldo))}
             </Text>
@@ -270,7 +270,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
 
           {tenant.anmerkungen ? (
             <View style={styles.notesSection}>
-              <Text style={styles.notesLabel}>Anmerkungen:</Text>
+              <Text style={styles.notesLabel}>Notes:</Text>
               <Text style={styles.notesText}>{tenant.anmerkungen}</Text>
             </View>
           ) : null}
@@ -278,10 +278,10 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
           {/* Termination Date Section */}
           <View style={styles.terminationSection}>
             <View style={styles.terminationHeader}>
-              <Text style={styles.terminationLabel}>Kündigungsdatum:</Text>
+              <Text style={styles.terminationLabel}>Termination Date:</Text>
               {canEditTenants() && tenant.termination_date && (
                 <TouchableOpacity onPress={handleRemoveTerminationDate}>
-                  <Text style={styles.removeTerminationText}>Entfernen</Text>
+                  <Text style={styles.removeTerminationText}>Remove</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -293,7 +293,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
                     style={styles.editTerminationButton}
                     onPress={handleSetTerminationDate}
                   >
-                    <Text style={styles.editTerminationButtonText}>Bearbeiten</Text>
+                    <Text style={styles.editTerminationButtonText}>Edit</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -304,10 +304,10 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
                     style={styles.setTerminationButton}
                     onPress={handleSetTerminationDate}
                   >
-                    <Text style={styles.setTerminationButtonText}>+ Kündigungsdatum setzen</Text>
+                    <Text style={styles.setTerminationButtonText}>+ Set Termination Date</Text>
                   </TouchableOpacity>
                 ) : (
-                  <Text style={styles.noTerminationText}>Nicht gesetzt</Text>
+                  <Text style={styles.noTerminationText}>Not set</Text>
                 )}
               </>
             )}
@@ -318,8 +318,8 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
         {fiscalYearsData.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Mietjahre (Dez-Nov)</Text>
-              <Text style={styles.sectionSubtitle}>Seit {formatDate(tenant.mietanfang_datum)}</Text>
+              <Text style={styles.sectionTitle}>Rental Years (Dec-Nov)</Text>
+              <Text style={styles.sectionSubtitle}>Since {formatDate(tenant.mietanfang_datum)}</Text>
             </View>
 
             {/* Loop through all fiscal years */}
@@ -327,7 +327,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
               <View key={fiscalYearData.fiscalYear} style={fyIndex > 0 ? styles.fiscalYearSeparator : null}>
                 {/* Year Total */}
                 <View style={styles.fiscalYearRow}>
-                  <Text style={styles.fiscalYearLabel}>Mietjahr {fiscalYearData.fiscalYear}</Text>
+                  <Text style={styles.fiscalYearLabel}>Year {fiscalYearData.fiscalYear}</Text>
                   <Text style={styles.fiscalYearValue}>{formatCurrency(fiscalYearData.soll)}</Text>
                   <Text style={styles.fiscalYearValue}>{formatCurrency(fiscalYearData.ist)}</Text>
                   <Text style={[
@@ -340,9 +340,9 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
 
                 {/* Table Header */}
                 <View style={styles.fiscalTableHeader}>
-                  <Text style={styles.fiscalHeaderCell}>Zeitraum</Text>
-                  <Text style={styles.fiscalHeaderCellRight}>Soll</Text>
-                  <Text style={styles.fiscalHeaderCellRight}>Ist</Text>
+                  <Text style={styles.fiscalHeaderCell}>Period</Text>
+                  <Text style={styles.fiscalHeaderCellRight}>Exp.</Text>
+                  <Text style={styles.fiscalHeaderCellRight}>Act.</Text>
                   <Text style={styles.fiscalHeaderCellRight}>Diff.</Text>
                 </View>
 
@@ -386,13 +386,13 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
         {/* Payments Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Zahlungshistorie</Text>
-            <Text style={styles.sectionSubtitle}>{payments.length} Zahlungen</Text>
+            <Text style={styles.sectionTitle}>Payment History</Text>
+            <Text style={styles.sectionSubtitle}>{payments.length} Payments</Text>
           </View>
 
           {payments.length === 0 ? (
             <View style={styles.emptyPayments}>
-              <Text style={styles.emptyText}>Keine Zahlungen vorhanden</Text>
+              <Text style={styles.emptyText}>No payments available</Text>
             </View>
           ) : (
             <View style={styles.paymentsList}>
@@ -418,7 +418,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
         {canDeleteTenants() && (
           <View style={styles.dangerZone}>
             <TouchableOpacity onPress={handleDeleteTenant} activeOpacity={0.7}>
-              <Text style={styles.deleteTenantLink}>Mieter dauerhaft löschen</Text>
+              <Text style={styles.deleteTenantLink}>Permanently Delete Tenant</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -431,7 +431,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
           onPress={() => setModalVisible(true)}
           activeOpacity={0.8}
         >
-          <Text style={styles.addButtonText}>+ Zahlung erfassen</Text>
+          <Text style={styles.addButtonText}>+ Record Payment</Text>
         </TouchableOpacity>
       )}
 
@@ -444,9 +444,9 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Neue Zahlung</Text>
+            <Text style={styles.modalTitle}>New Payment</Text>
 
-            <Text style={styles.inputLabel}>Betrag (AED)</Text>
+            <Text style={styles.inputLabel}>Amount (AED)</Text>
             <TextInput
               style={styles.input}
               placeholder="0.00"
@@ -455,7 +455,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
               onChangeText={(text) => setNewPayment({ ...newPayment, betrag: text })}
             />
 
-            <Text style={styles.inputLabel}>Datum</Text>
+            <Text style={styles.inputLabel}>Date</Text>
             <TextInput
               style={styles.input}
               placeholder="YYYY-MM-DD"
@@ -468,14 +468,14 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.modalButton, styles.saveButton]}
                 onPress={handleAddPayment}
               >
-                <Text style={styles.saveButtonText}>Speichern</Text>
+                <Text style={styles.saveButtonText}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -491,9 +491,9 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Kündigungsdatum</Text>
+            <Text style={styles.modalTitle}>Termination Date</Text>
 
-            <Text style={styles.inputLabel}>Datum (YYYY-MM-DD)</Text>
+            <Text style={styles.inputLabel}>Date (YYYY-MM-DD)</Text>
             <TextInput
               style={styles.input}
               placeholder="YYYY-MM-DD"
@@ -506,14 +506,14 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setTerminationModalVisible(false)}
               >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.modalButton, styles.saveButton]}
                 onPress={handleSaveTerminationDate}
               >
-                <Text style={styles.saveButtonText}>Speichern</Text>
+                <Text style={styles.saveButtonText}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
