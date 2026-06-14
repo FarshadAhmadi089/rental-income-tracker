@@ -3,11 +3,66 @@ import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { initDatabase } from './src/services/database';
-import { DashboardScreen, TenantDetailScreen, AddTenantScreen } from './src/screens';
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import {
+  LoginScreen,
+  RegisterScreen,
+  DashboardScreen,
+  TenantDetailScreen,
+  AddTenantScreen,
+  TeamManagementScreen,
+} from './src/screens';
 
 const Stack = createNativeStackNavigator();
 
-export default function App() {
+/**
+ * Auth Stack - for unauthenticated users
+ */
+const AuthStack = () => {
+  return (
+    <Stack.Navigator
+      initialRouteName="Login"
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
+    </Stack.Navigator>
+  );
+};
+
+/**
+ * App Stack - for authenticated users
+ */
+const AppStack = () => {
+  return (
+    <Stack.Navigator
+      initialRouteName="Dashboard"
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="Dashboard" component={DashboardScreen} />
+      <Stack.Screen name="TenantDetail" component={TenantDetailScreen} />
+      <Stack.Screen name="AddTenant" component={AddTenantScreen} />
+      <Stack.Screen name="TeamManagement" component={TeamManagementScreen} />
+    </Stack.Navigator>
+  );
+};
+
+/**
+ * Navigation Guard - switches between Auth and App stacks
+ */
+const RootNavigator = () => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <AppStack /> : <AuthStack />;
+};
+
+/**
+ * Main App Component
+ */
+function AppContent() {
   const [isDbReady, setIsDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
 
@@ -51,20 +106,22 @@ export default function App() {
     );
   }
 
-  // Render app only when database is ready
+  // Render app with navigation guard
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName="Dashboard"
-        screenOptions={{
-          headerShown: false,
-        }}
-      >
-        <Stack.Screen name="Dashboard" component={DashboardScreen} />
-        <Stack.Screen name="TenantDetail" component={TenantDetailScreen} />
-        <Stack.Screen name="AddTenant" component={AddTenantScreen} />
-      </Stack.Navigator>
+      <RootNavigator />
     </NavigationContainer>
+  );
+}
+
+/**
+ * App wrapped with AuthProvider
+ */
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

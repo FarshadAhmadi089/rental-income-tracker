@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
 import { getAllTenants, getAllPayments } from '../services/database';
 import { getAllTenantBalances, formatCurrency } from '../services/calculationService';
 import { calculateGlobalQuarterlyReport } from '../utils/rentCalculations';
@@ -28,6 +29,7 @@ interface TenantSection {
 }
 
 export default function DashboardScreen({ navigation }: DashboardScreenProps) {
+  const { user, logout, canEditTenants, canManageTeam } = useAuth();
   const [sections, setSections] = useState<TenantSection[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -185,6 +187,35 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        {/* User Info & Logout */}
+        <View style={styles.userBar}>
+          <View>
+            <Text style={styles.userName}>{user?.name || user?.email}</Text>
+            <Text style={styles.userRole}>
+              {user?.role === 'admin' ? 'Admin' : user?.role === 'rent_collector' ? 'Rent Collector' : 'Spectator'}
+            </Text>
+          </View>
+          <View style={styles.headerActions}>
+            {canManageTeam() && (
+              <TouchableOpacity
+                style={styles.teamButton}
+                onPress={() => navigation.navigate('TeamManagement')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.teamButtonText}>👥</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={logout}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.logoutButtonText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Title & Report Button */}
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.title}>Mieteinnahmen</Text>
@@ -223,13 +254,16 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
         }
       />
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('AddTenant')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
+      {/* Add Tenant FAB - Only for Admin & Rent Collector */}
+      {canEditTenants() && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('AddTenant')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.fabText}>+</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Global Report Modal */}
       <Modal
@@ -332,6 +366,50 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
+  },
+  userBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  userName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  userRole: {
+    fontSize: 12,
+    color: '#DBEAFE',
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  teamButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  teamButtonText: {
+    fontSize: 18,
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  logoutButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   headerRow: {
     flexDirection: 'row',

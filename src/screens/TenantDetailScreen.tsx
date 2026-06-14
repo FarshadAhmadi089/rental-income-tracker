@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
 import { getTenantById, getPaymentsByTenantId, createPayment, deletePayment, updateTenant, deleteTenantPermanently } from '../services/database';
 import { getTenantBalance, formatCurrency, formatDate } from '../services/calculationService';
 import { generateTenantPDF } from '../services/pdfService';
@@ -24,6 +25,7 @@ interface TenantDetailScreenProps {
 
 export default function TenantDetailScreen({ route, navigation }: TenantDetailScreenProps) {
   const { tenantId } = route.params;
+  const { canAddPayments, canEditTenants, canDeleteTenants } = useAuth();
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [balance, setBalance] = useState<any>(null);
@@ -277,7 +279,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
           <View style={styles.terminationSection}>
             <View style={styles.terminationHeader}>
               <Text style={styles.terminationLabel}>Kündigungsdatum:</Text>
-              {tenant.termination_date && (
+              {canEditTenants() && tenant.termination_date && (
                 <TouchableOpacity onPress={handleRemoveTerminationDate}>
                   <Text style={styles.removeTerminationText}>Entfernen</Text>
                 </TouchableOpacity>
@@ -286,20 +288,28 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
             {tenant.termination_date ? (
               <View style={styles.terminationRow}>
                 <Text style={styles.terminationDateText}>{formatDate(tenant.termination_date)}</Text>
-                <TouchableOpacity
-                  style={styles.editTerminationButton}
-                  onPress={handleSetTerminationDate}
-                >
-                  <Text style={styles.editTerminationButtonText}>Bearbeiten</Text>
-                </TouchableOpacity>
+                {canEditTenants() && (
+                  <TouchableOpacity
+                    style={styles.editTerminationButton}
+                    onPress={handleSetTerminationDate}
+                  >
+                    <Text style={styles.editTerminationButtonText}>Bearbeiten</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
-              <TouchableOpacity
-                style={styles.setTerminationButton}
-                onPress={handleSetTerminationDate}
-              >
-                <Text style={styles.setTerminationButtonText}>+ Kündigungsdatum setzen</Text>
-              </TouchableOpacity>
+              <>
+                {canEditTenants() ? (
+                  <TouchableOpacity
+                    style={styles.setTerminationButton}
+                    onPress={handleSetTerminationDate}
+                  >
+                    <Text style={styles.setTerminationButtonText}>+ Kündigungsdatum setzen</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.noTerminationText}>Nicht gesetzt</Text>
+                )}
+              </>
             )}
           </View>
         </View>
@@ -404,22 +414,26 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
           )}
         </View>
 
-        {/* Discrete Delete Option at the bottom */}
-        <View style={styles.dangerZone}>
-          <TouchableOpacity onPress={handleDeleteTenant} activeOpacity={0.7}>
-            <Text style={styles.deleteTenantLink}>Mieter dauerhaft löschen</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Discrete Delete Option at the bottom - Admin Only */}
+        {canDeleteTenants() && (
+          <View style={styles.dangerZone}>
+            <TouchableOpacity onPress={handleDeleteTenant} activeOpacity={0.7}>
+              <Text style={styles.deleteTenantLink}>Mieter dauerhaft löschen</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
-      {/* Add Payment Button */}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setModalVisible(true)}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.addButtonText}>+ Zahlung erfassen</Text>
-      </TouchableOpacity>
+      {/* Add Payment Button - Admin & Rent Collector Only */}
+      {canAddPayments() && (
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setModalVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.addButtonText}>+ Zahlung erfassen</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Add Payment Modal */}
       <Modal
@@ -670,6 +684,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#D97706',
     fontWeight: '600',
+  },
+  noTerminationText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
   },
   section: {
     backgroundColor: '#FFFFFF',
