@@ -51,14 +51,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loadUserFromStorage = async () => {
     try {
+      console.log('📱 AuthContext: Loading user from storage...');
       const storedUser = await AsyncStorage.getItem('user');
       const accessToken = await AsyncStorage.getItem('access_token');
 
       if (storedUser && accessToken) {
-        setUser(JSON.parse(storedUser));
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+        console.log('✅ AuthContext: User loaded from storage:', userData.email);
+      } else {
+        console.log('ℹ️ AuthContext: No stored user found');
       }
     } catch (error) {
-      console.error('Error loading user from storage:', error);
+      console.error('❌ AuthContext: Error loading user from storage:', error);
     } finally {
       setIsLoading(false);
     }
@@ -69,9 +74,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    */
   const login = async (email: string, password: string): Promise<void> => {
     try {
+      console.log('🔑 AuthContext: Starting login for:', email);
+
       // Call backend login API
       const response = await authAPI.login(email, password);
       const { access_token, refresh_token } = response;
+
+      console.log('✅ AuthContext: Login API successful, storing tokens...');
 
       // Store tokens
       await AsyncStorage.setItem('access_token', access_token);
@@ -90,9 +99,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Store user data
       await AsyncStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
+
+      console.log('✅ AuthContext: Login complete, user data stored');
     } catch (error: any) {
-      console.error('Login error:', error);
-      throw new Error(error.response?.data?.detail || 'Login failed. Please check your credentials.');
+      console.error('❌ AuthContext: Login error:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        responseData: error.response?.data,
+        request: error.request ? 'Request made but no response' : 'Request not made',
+        code: error.code,
+        isNetworkError: !error.response,
+      });
+
+      // Provide user-friendly error message
+      let errorMessage = 'Login failed. Please check your credentials.';
+      if (!error.response) {
+        errorMessage = 'Network error. Cannot reach the server. Please check your internet connection.';
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Invalid email or password.';
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      }
+
+      throw new Error(errorMessage);
     }
   };
 
@@ -101,11 +131,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    */
   const logout = async () => {
     try {
+      console.log('🚪 AuthContext: Logging out...');
       // Clear tokens and user data from AsyncStorage
       await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user']);
       setUser(null);
+      console.log('✅ AuthContext: Logout complete');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('❌ AuthContext: Logout error:', error);
     }
   };
 

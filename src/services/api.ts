@@ -5,7 +5,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * API Base URL - DigitalOcean Server
  * IMPORTANT: This is the live server URL
  */
-export const API_BASE_URL = 'http://167.172.168.130:8000';
+const DEFAULT_API_URL = 'http://167.172.168.130:8000';
+
+/**
+ * Sanitize URL by removing trailing slashes
+ * Prevents malformed double-slash endpoints
+ */
+export const sanitizeUrl = (url: string): string => {
+  return url.replace(/\/+$/, '');
+};
+
+export const API_BASE_URL = sanitizeUrl(DEFAULT_API_URL);
 
 /**
  * Axios instance configured for the backend API
@@ -28,12 +38,25 @@ api.interceptors.request.use(
       if (accessToken) {
         config.headers.Authorization = `Bearer ${accessToken}`;
       }
+
+      // Enhanced logging
+      console.log('📤 API Request:', {
+        method: config.method?.toUpperCase(),
+        url: config.url,
+        baseURL: config.baseURL,
+        fullURL: `${config.baseURL}${config.url}`,
+        headers: config.headers,
+      });
     } catch (error) {
-      console.error('Error reading access token:', error);
+      console.error('❌ Error reading access token:', error);
     }
     return config;
   },
   (error) => {
+    console.error('❌ Request interceptor error:', {
+      message: error.message,
+      stack: error.stack,
+    });
     return Promise.reject(error);
   }
 );
@@ -42,8 +65,31 @@ api.interceptors.request.use(
  * Response interceptor - Handle token refresh on 401
  */
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Enhanced logging for successful responses
+    console.log('✅ API Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.config.url,
+      data: response.data,
+    });
+    return response;
+  },
   async (error) => {
+    // Enhanced error logging
+    console.error('❌ API Response Error:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      baseURL: error.config?.baseURL,
+      fullURL: error.config ? `${error.config.baseURL}${error.config.url}` : 'N/A',
+      responseData: error.response?.data,
+      request: error.request ? 'Request sent but no response received' : 'Request not sent',
+      code: error.code,
+      isNetworkError: error.message.includes('Network') || !error.response,
+    });
+
     const originalRequest = error.config;
 
     // If 401 and we haven't retried yet, try to refresh token
@@ -54,9 +100,12 @@ api.interceptors.response.use(
         const refreshToken = await AsyncStorage.getItem('refresh_token');
         if (!refreshToken) {
           // No refresh token available, logout
+          console.warn('⚠️ No refresh token available, logging out');
           await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user']);
           return Promise.reject(error);
         }
+
+        console.log('🔄 Attempting to refresh token...');
 
         // Call refresh endpoint
         const response = await axios.post(
@@ -70,11 +119,18 @@ api.interceptors.response.use(
         await AsyncStorage.setItem('access_token', access_token);
         await AsyncStorage.setItem('refresh_token', refresh_token);
 
+        console.log('✅ Token refreshed successfully');
+
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${access_token}`;
         return api(originalRequest);
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         // Refresh failed, logout
+        console.error('❌ Token refresh failed:', {
+          message: refreshError.message,
+          status: refreshError.response?.status,
+          data: refreshError.response?.data,
+        });
         await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user']);
         return Promise.reject(refreshError);
       }
@@ -92,29 +148,60 @@ export default api;
 export const authAPI = {
   /**
    * Login with email and password
+   * Uses OAuth2 form-data format (application/x-www-form-urlencoded)
    */
   login: async (email: string, password: string) => {
-    const formData = new URLSearchParams();
-    formData.append('username', email); // OAuth2 expects 'username'
-    formData.append('password', password);
+    try {
+      console.log('🔐 Attempting login...', {
+        email,
+        endpoint: `${API_BASE_URL}/api/auth/login`,
+      });
 
-    const response = await axios.post(`${API_BASE_URL}/api/auth/login`, formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
+      const formData = new URLSearchParams();
+      formData.append('username', email); // OAuth2 expects 'username'
+      formData.append('password', password);
 
-    return response.data; // { access_token, refresh_token, token_type }
+      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+
+      console.log('✅ Login successful');
+      return response.data; // { access_token, refresh_token, token_type }
+    } catch (error: any) {
+      console.error('❌ Login failed:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        responseData: error.response?.data,
+        request: error.request ? 'Request made but no response' : 'Request not made',
+        code: error.code,
+        url: `${API_BASE_URL}/api/auth/login`,
+      });
+      throw error;
+    }
   },
 
   /**
    * Refresh access token
    */
   refresh: async (refreshToken: string) => {
-    const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
-      refresh_token: refreshToken,
-    });
-    return response.data; // { access_token, refresh_token, token_type }
+    try {
+      console.log('🔄 Refreshing token...');
+      const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+        refresh_token: refreshToken,
+      });
+      console.log('✅ Token refresh successful');
+      return response.data; // { access_token, refresh_token, token_type }
+    } catch (error: any) {
+      console.error('❌ Token refresh failed:', {
+        message: error.message,
+        status: error.response?.status,
+        responseData: error.response?.data,
+      });
+      throw error;
+    }
   },
 };
 
