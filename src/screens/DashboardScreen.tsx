@@ -33,6 +33,7 @@ interface TenantSection {
 export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const { user, logout, canEditTenants, canManageTeam } = useAuth();
   const [sections, setSections] = useState<TenantSection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -47,6 +48,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 
   const loadData = useCallback(async () => {
     try {
+      setIsLoading(true);
       const [tenants, allPayments] = await Promise.all([
         tenantAPI.listTenants(),
         paymentAPI.listPayments()
@@ -91,7 +93,9 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       setSections(newSections);
     } catch (error) {
       console.error('Error loading tenants:', error);
-      Alert.alert('Error', 'Failed to load tenants.');
+      Alert.alert('Error', 'Failed to load tenants. Please check your internet connection.');
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -108,7 +112,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    loadData();
+    await loadData();
     setRefreshing(false);
   };
 
@@ -233,6 +237,29 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 
   // Calculate total tenants
   const totalTenants = sections.reduce((sum, section) => sum + section.data.length, 0);
+
+  // Show loading indicator on initial load
+  if (isLoading && sections.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.userBar}>
+            <View>
+              <Text style={styles.userName}>{user?.name || user?.email}</Text>
+              <Text style={styles.userRole}>
+                {user?.role === 'admin' ? 'Admin' : user?.role === 'rent_collector' ? 'Rent Collector' : 'Spectator'}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.title}>Rental Income</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text style={styles.loadingText}>Loading tenants...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -491,6 +518,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
   },
   header: {
     backgroundColor: '#2563EB',

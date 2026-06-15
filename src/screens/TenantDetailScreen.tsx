@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
@@ -59,7 +60,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
       setFiscalYearsData(fiscalData);
     } catch (error) {
       console.error('Error loading tenant details:', error);
-      Alert.alert('Error', 'Failed to load data.');
+      Alert.alert('Error', 'Failed to load tenant details. Please check your internet connection.');
     }
   }, [tenantId, navigation]);
 
@@ -218,7 +219,15 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
   if (!tenant || !balance) {
     return (
       <View style={styles.container}>
-        <Text>Loading...</Text>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text style={styles.loadingText}>Loading tenant details...</Text>
+        </View>
       </View>
     );
   }
