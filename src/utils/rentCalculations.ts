@@ -539,7 +539,7 @@ export const calculateGlobalQuarterlyReport = (
 
   // Calculate data for each tenant
   const tenantData = tenants.map(tenant => {
-    const tenantPayments = allPayments.filter(p => p.mieter_id === tenant.id);
+    const tenantPayments = allPayments.filter(p => p.tenant_id === tenant.id);
     return calculateTenantQuarterlyData(tenant, tenantPayments, leaseYear, quarter);
   });
 
@@ -561,4 +561,104 @@ export const calculateGlobalQuarterlyReport = (
     totalPaid: Math.round(totalPaid * 100) / 100,
     totalBalance: Math.round(totalBalance * 100) / 100,
   };
+};
+
+/**
+ * Get available lease years based on tenant move-in dates
+ * A year is available if at least one tenant had an active lease during that year
+ */
+export const getAvailableLeaseYears = (tenants: Tenant[]): number[] => {
+  if (tenants.length === 0) return [];
+
+  const years = new Set<number>();
+  const today = new Date();
+
+  tenants.forEach(tenant => {
+    const moveInDate = new Date(tenant.move_in_date);
+    const moveInMonth = moveInDate.getMonth();
+    const moveInYear = moveInDate.getFullYear();
+
+    // Calculate the first fiscal year this tenant was active
+    // Fiscal year starts in December
+    let firstFiscalYear: number;
+    if (moveInMonth === 11) {
+      // If moved in December, first fiscal year is this year
+      firstFiscalYear = moveInYear;
+    } else {
+      // Otherwise, first fiscal year started last December
+      firstFiscalYear = moveInYear - 1;
+    }
+
+    // Determine last fiscal year (current or termination date)
+    let lastFiscalYear: number;
+    if (tenant.termination_date) {
+      const terminationDate = new Date(tenant.termination_date);
+      const termMonth = terminationDate.getMonth();
+      const termYear = terminationDate.getFullYear();
+
+      if (termMonth === 11) {
+        lastFiscalYear = termYear;
+      } else {
+        lastFiscalYear = termYear - 1;
+      }
+    } else {
+      // Active tenant - use current fiscal year
+      const currentMonth = today.getMonth();
+      const currentYear = today.getFullYear();
+
+      if (currentMonth === 11) {
+        lastFiscalYear = currentYear;
+      } else {
+        lastFiscalYear = currentYear - 1;
+      }
+    }
+
+    // Add all fiscal years this tenant was active
+    for (let year = firstFiscalYear; year <= lastFiscalYear; year++) {
+      years.add(year);
+    }
+  });
+
+  return Array.from(years).sort((a, b) => a - b);
+};
+
+/**
+ * Get available quarters for a specific lease year based on tenant data
+ * A quarter is available if at least one tenant was active during that quarter
+ */
+export const getAvailableQuarters = (tenants: Tenant[], leaseYear: number): number[] => {
+  if (tenants.length === 0) return [];
+
+  const quarters = new Set<number>();
+  const today = new Date();
+
+  tenants.forEach(tenant => {
+    const moveInDate = new Date(tenant.move_in_date);
+
+    // Calculate fiscal year start and end for the selected year
+    const fiscalYearStart = new Date(leaseYear, 11, 1); // December 1st
+    const fiscalYearEnd = new Date(leaseYear + 1, 10, 30); // November 30th
+
+    // Determine tenant's end date (termination or today)
+    const endDate = tenant.termination_date ? new Date(tenant.termination_date) : today;
+
+    // Check if tenant was active at all during this fiscal year
+    if (moveInDate > fiscalYearEnd || endDate < fiscalYearStart) {
+      return; // Skip this tenant
+    }
+
+    // Check each quarter
+    for (let q = 1; q <= 4; q++) {
+      const { start: quarterStart, end: quarterEnd } = getQuarterDateRange(leaseYear, q);
+
+      // Tenant is active in this quarter if:
+      // - Move-in date is on or before quarter end
+      // - End date (termination or today) is on or after quarter start
+      if (moveInDate <= quarterEnd && endDate >= quarterStart) {
+        quarters.add(q);
+      }
+    }
+  });
+
+  return Array.from(quarters).sort((a, b) => a - b);
 };

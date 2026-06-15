@@ -16,7 +16,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { tenantAPI, paymentAPI, userAPI } from '../services/api';
 import { getAllTenantBalances, formatCurrency } from '../services/calculationService';
-import { calculateGlobalQuarterlyReport } from '../utils/rentCalculations';
+import { calculateGlobalQuarterlyReport, getAvailableLeaseYears, getAvailableQuarters } from '../utils/rentCalculations';
 import { generateGlobalQuarterlyPDF } from '../services/globalReportPdfService';
 import type { TenantBalance } from '../services/calculationService';
 import type { Payment } from '../models';
@@ -33,6 +33,7 @@ interface TenantSection {
 export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const { user, logout, canEditTenants, canManageTeam } = useAuth();
   const [sections, setSections] = useState<TenantSection[]>([]);
+  const [tenants, setTenants] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -49,11 +50,12 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [tenants, allPayments] = await Promise.all([
+      const [tenantsData, allPayments] = await Promise.all([
         tenantAPI.listTenants(),
         paymentAPI.listPayments()
       ]);
-      const balancesData = getAllTenantBalances(tenants, allPayments);
+      setTenants(tenantsData);
+      const balancesData = getAllTenantBalances(tenantsData, allPayments);
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -231,9 +233,11 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
     );
   };
 
-  // Generate year options (last 5 years and next 2 years)
-  const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 8 }, (_, i) => currentYear - 5 + i);
+  // Generate year options based on tenant move-in dates
+  const yearOptions = getAvailableLeaseYears(tenants);
+
+  // Generate quarter options based on selected year and tenant data
+  const quarterOptions = getAvailableQuarters(tenants, selectedYear);
 
   // Calculate total tenants
   const totalTenants = sections.reduce((sum, section) => sum + section.data.length, 0);
@@ -389,15 +393,19 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 
             <Text style={styles.inputLabel}>Quarter</Text>
             <View style={styles.quarterContainer}>
-              {[1, 2, 3, 4].map((q) => (
-                <TouchableOpacity
-                  key={q}
-                  style={[
-                    styles.quarterButton,
-                    selectedQuarter === q && styles.quarterButtonSelected,
-                  ]}
-                  onPress={() => setSelectedQuarter(q)}
-                >
+              {[1, 2, 3, 4].map((q) => {
+                const isAvailable = quarterOptions.includes(q);
+                return (
+                  <TouchableOpacity
+                    key={q}
+                    style={[
+                      styles.quarterButton,
+                      selectedQuarter === q && styles.quarterButtonSelected,
+                      !isAvailable && styles.quarterButtonDisabled,
+                    ]}
+                    onPress={() => isAvailable && setSelectedQuarter(q)}
+                    disabled={!isAvailable}
+                  >
                   <Text
                     style={[
                       styles.quarterButtonText,
@@ -415,7 +423,8 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
                     {q === 1 ? 'Dec-Feb' : q === 2 ? 'Mar-May' : q === 3 ? 'Jun-Aug' : 'Sep-Nov'}
                   </Text>
                 </TouchableOpacity>
-              ))}
+                );
+              })}
             </View>
 
             <View style={styles.modalButtons}>
@@ -817,6 +826,11 @@ const styles = StyleSheet.create({
   quarterButtonSelected: {
     backgroundColor: '#2563EB',
     borderColor: '#2563EB',
+  },
+  quarterButtonDisabled: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+    opacity: 0.5,
   },
   quarterButtonText: {
     fontSize: 16,

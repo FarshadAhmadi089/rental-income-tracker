@@ -12,7 +12,7 @@ export const generateTenantPDF = async (
   payments: Payment[]
 ): Promise<void> => {
   try {
-    const balance = getTenantBalance(tenant);
+    const balance = getTenantBalance(tenant, payments);
     const saldoColor = balance.saldo > 0 ? '#EF4444' : balance.saldo < 0 ? '#10B981' : '#6B7280';
     const saldoText = balance.saldo > 0 ? 'Outstanding' : balance.saldo < 0 ? 'Overpaid' : 'Settled';
 
@@ -264,7 +264,7 @@ export const generateTenantPDF = async (
           <h1>Tenant Report: ${tenant.name}</h1>
           <div class="subtitle">
             Generated: ${formatDate(new Date().toISOString().split('T')[0])} |
-            Lease Start: ${formatDate(tenant.mietanfang_datum)}
+            Lease Start: ${formatDate(tenant.move_in_date)}
             ${tenant.termination_date ? ` | <strong style="color: #EF4444;">Lease End: ${formatDate(tenant.termination_date)}</strong>` : ' | <strong style="color: #10B981;">Active Lease</strong>'}
           </div>
 
@@ -275,7 +275,7 @@ export const generateTenantPDF = async (
             </div>
             <div class="summary-row">
               <span class="summary-label">Annual Rent:</span>
-              <span class="summary-value">${formatCurrency(tenant.jahresmiete)}</span>
+              <span class="summary-value">${formatCurrency(tenant.annual_rent)}</span>
             </div>
             <div class="summary-row">
               <span class="summary-label">Total Due:</span>
@@ -294,9 +294,9 @@ export const generateTenantPDF = async (
             </div>
           </div>
 
-          ${tenant.anmerkungen ? `
+          ${tenant.notes ? `
             <h2>Notes</h2>
-            <p style="color: #6B7280; margin-top: 8px;">${tenant.anmerkungen}</p>
+            <p style="color: #6B7280; margin-top: 8px;">${tenant.notes}</p>
           ` : ''}
 
           <!-- Fiscal Years Section -->
@@ -372,8 +372,8 @@ export const generateTenantPDF = async (
                 ${payments.map((payment, index) => `
                   <tr>
                     <td>${index + 1}</td>
-                    <td>${formatDate(payment.datum)}</td>
-                    <td class="amount">${formatCurrency(payment.betrag)}</td>
+                    <td>${formatDate(payment.payment_date)}</td>
+                    <td class="amount">${formatCurrency(payment.amount)}</td>
                   </tr>
                 `).join('')}
               </tbody>
