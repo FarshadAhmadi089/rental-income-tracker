@@ -14,11 +14,10 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
-import { getAllTenants, getAllPayments } from '../services/database';
+import { tenantAPI, paymentAPI, userAPI } from '../services/api';
 import { getAllTenantBalances, formatCurrency } from '../services/calculationService';
 import { calculateGlobalQuarterlyReport } from '../utils/rentCalculations';
 import { generateGlobalQuarterlyPDF } from '../services/globalReportPdfService';
-import { userAPI } from '../services/api';
 import type { TenantBalance } from '../services/calculationService';
 import type { Payment } from '../models';
 
@@ -46,10 +45,13 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     try {
-      const tenants = getAllTenants();
-      const balancesData = getAllTenantBalances(tenants);
+      const [tenants, allPayments] = await Promise.all([
+        tenantAPI.listTenants(),
+        paymentAPI.listPayments()
+      ]);
+      const balancesData = getAllTenantBalances(tenants, allPayments);
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -148,8 +150,10 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
 
   const handleGenerateGlobalReport = async () => {
     try {
-      const tenants = getAllTenants();
-      const allPayments = getAllPayments();
+      const [tenants, allPayments] = await Promise.all([
+        tenantAPI.listTenants(),
+        paymentAPI.listPayments()
+      ]);
 
       if (tenants.length === 0) {
         Alert.alert('No Tenants', 'Please add tenants first before generating a report.');

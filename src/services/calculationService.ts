@@ -1,6 +1,5 @@
 import type { Tenant } from '../models/Tenant';
 import type { Payment } from '../models/Payment';
-import { getPaymentsByTenantId } from './database';
 
 /**
  * Tenant Balance Information
@@ -23,7 +22,7 @@ export interface TenantBalance {
  * - If tenant has termination_date, calculation stops at that date
  */
 export const calculateSoll = (tenant: Tenant): number => {
-  const startDate = new Date(tenant.mietanfang_datum);
+  const startDate = new Date(tenant.move_in_date);
   const today = new Date();
 
   // If tenant has terminated, use termination date as end date
@@ -35,7 +34,7 @@ export const calculateSoll = (tenant: Tenant): number => {
   startDate.setHours(0, 0, 0, 0);
   endDate.setHours(0, 0, 0, 0);
 
-  const monthlyRate = tenant.jahresmiete / 12;
+  const monthlyRate = tenant.annual_rent / 12;
 
   let totalDue = 0;
   let currentDate = new Date(startDate);
@@ -85,9 +84,8 @@ export const calculateSoll = (tenant: Tenant): number => {
 /**
  * Calculate total payments received (Ist)
  */
-export const calculateIst = (mieter_id: number): number => {
-  const payments = getPaymentsByTenantId(mieter_id);
-  const total = payments.reduce((sum, payment) => sum + payment.betrag, 0);
+export const calculateIst = (payments: Payment[]): number => {
+  const total = payments.reduce((sum, payment) => sum + payment.amount, 0);
   return Math.round(total * 100) / 100; // Round to 2 decimals
 };
 
@@ -103,11 +101,11 @@ export const calculateSaldo = (soll: number, ist: number): number => {
 /**
  * Get complete balance information for a tenant
  */
-export const getTenantBalance = (tenant: Tenant): TenantBalance => {
+export const getTenantBalance = (tenant: Tenant, payments: Payment[]): TenantBalance => {
   const soll = calculateSoll(tenant);
-  const ist = calculateIst(tenant.id);
+  const ist = calculateIst(payments);
   const saldo = calculateSaldo(soll, ist);
-  const monatlicheRate = Math.round((tenant.jahresmiete / 12) * 100) / 100;
+  const monatlicheRate = Math.round((tenant.annual_rent / 12) * 100) / 100;
 
   return {
     tenant,
@@ -120,9 +118,13 @@ export const getTenantBalance = (tenant: Tenant): TenantBalance => {
 
 /**
  * Get all tenant balances
+ * Note: Requires payments to be fetched separately for each tenant
  */
-export const getAllTenantBalances = (tenants: Tenant[]): TenantBalance[] => {
-  return tenants.map(tenant => getTenantBalance(tenant));
+export const getAllTenantBalances = (tenants: Tenant[], allPayments: Payment[]): TenantBalance[] => {
+  return tenants.map(tenant => {
+    const tenantPayments = allPayments.filter(payment => payment.tenant_id === tenant.id);
+    return getTenantBalance(tenant, tenantPayments);
+  });
 };
 
 /**

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
-import { getTenantById, getPaymentsByTenantId, createPayment, deletePayment, updateTenant, deleteTenantPermanently } from '../services/database';
+import { tenantAPI, paymentAPI } from '../services/api';
 import { getTenantBalance, formatCurrency, formatDate } from '../services/calculationService';
 import { generateTenantPDF } from '../services/pdfService';
 import { calculateFiscalYearData } from '../utils/rentCalculations';
@@ -33,14 +33,18 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
   const [modalVisible, setModalVisible] = useState(false);
   const [terminationModalVisible, setTerminationModalVisible] = useState(false);
   const [newPayment, setNewPayment] = useState({
-    betrag: '',
-    datum: new Date().toISOString().split('T')[0], // Today's date
+    amount: '',
+    payment_date: new Date().toISOString().split('T')[0], // Today's date
   });
   const [terminationDate, setTerminationDate] = useState('');
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     try {
-      const tenantData = getTenantById(tenantId);
+      const [tenantData, paymentsData] = await Promise.all([
+        tenantAPI.getTenant(String(tenantId)),
+        paymentAPI.listPayments(String(tenantId))
+      ]);
+
       if (!tenantData) {
         Alert.alert('Error', 'Tenant not found');
         navigation.goBack();
@@ -48,9 +52,8 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
       }
 
       setTenant(tenantData);
-      const paymentsData = getPaymentsByTenantId(tenantId);
       setPayments(paymentsData);
-      const balanceData = getTenantBalance(tenantData);
+      const balanceData = getTenantBalance(tenantData, paymentsData);
       setBalance(balanceData);
       const fiscalData = calculateFiscalYearData(tenantData, paymentsData);
       setFiscalYearsData(fiscalData);
@@ -70,26 +73,26 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
     loadData();
   }, [loadData]);
 
-  const handleAddPayment = () => {
-    if (!newPayment.betrag || parseFloat(newPayment.betrag) <= 0) {
+  const handleAddPayment = async () => {
+    if (!newPayment.amount || parseFloat(newPayment.amount) <= 0) {
       Alert.alert('Error', 'Please enter a valid amount.');
       return;
     }
 
     try {
       const paymentInput: PaymentInput = {
-        mieter_id: tenantId,
-        datum: newPayment.datum,
-        betrag: parseFloat(newPayment.betrag),
+        tenant_id: String(tenantId),
+        payment_date: newPayment.payment_date,
+        amount: parseFloat(newPayment.amount),
       };
 
-      createPayment(paymentInput);
+      await paymentAPI.createPayment(paymentInput);
       setModalVisible(false);
       setNewPayment({
-        betrag: '',
-        datum: new Date().toISOString().split('T')[0],
+        amount: '',
+        payment_date: new Date().toISOString().split('T')[0],
       });
-      loadData();
+      await loadData();
       Alert.alert('Success', 'Payment was recorded.');
     } catch (error) {
       console.error('Error adding payment:', error);
@@ -97,7 +100,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
     }
   };
 
-  const handleDeletePayment = (paymentId: number) => {
+  const handleDeletePayment = (paymentId: string) => {
     Alert.alert(
       'Delete Payment',
       'Do you really want to delete this payment?',
@@ -106,10 +109,10 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             try {
-              deletePayment(paymentId);
-              loadData();
+              await paymentAPI.deletePayment(paymentId);
+              await loadData();
             } catch (error) {
               Alert.alert('Error', 'Failed to delete payment.');
             }
@@ -138,7 +141,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
     setTerminationModalVisible(true);
   };
 
-  const handleSaveTerminationDate = () => {
+  const handleSaveTerminationDate = async () => {
     if (!tenant) return;
 
     if (!terminationDate) {
@@ -147,9 +150,9 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
     }
 
     try {
-      updateTenant(tenantId, { termination_date: terminationDate });
+      await tenantAPI.updateTenant(String(tenantId), { termination_date: terminationDate });
       setTerminationModalVisible(false);
-      loadData();
+      await loadData();
       Alert.alert('Success', 'Termination date was saved.');
     } catch (error) {
       console.error('Error setting termination date:', error);
@@ -168,10 +171,10 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             try {
-              updateTenant(tenantId, { termination_date: null });
-              loadData();
+              await tenantAPI.updateTenant(String(tenantId), { termination_date: null });
+              await loadData();
               Alert.alert('Success', 'Termination date was removed.');
             } catch (error) {
               Alert.alert('Error', 'Failed to remove termination date.');
@@ -193,9 +196,9 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
         {
           text: 'Permanently Delete',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             try {
-              deleteTenantPermanently(tenantId);
+              await tenantAPI.deleteTenant(String(tenantId));
               Alert.alert('Success', 'Tenant was permanently deleted.', [
                 {
                   text: 'OK',
@@ -235,7 +238,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
           </TouchableOpacity>
         </View>
         <Text style={styles.title}>{tenant.name}</Text>
-        <Text style={styles.subtitle}>Since {formatDate(tenant.mietanfang_datum)}</Text>
+        <Text style={styles.subtitle}>Since {formatDate(tenant.move_in_date)}</Text>
       </View>
 
       <ScrollView style={styles.content}>
@@ -248,7 +251,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
 
           <View style={styles.balanceRow}>
             <Text style={styles.balanceLabel}>Annual Rent:</Text>
-            <Text style={styles.balanceValue}>{formatCurrency(tenant.jahresmiete)}</Text>
+            <Text style={styles.balanceValue}>{formatCurrency(tenant.annual_rent)}</Text>
           </View>
 
           <View style={styles.balanceRow}>
@@ -268,10 +271,10 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
             </Text>
           </View>
 
-          {tenant.anmerkungen ? (
+          {tenant.notes ? (
             <View style={styles.notesSection}>
               <Text style={styles.notesLabel}>Notes:</Text>
-              <Text style={styles.notesText}>{tenant.anmerkungen}</Text>
+              <Text style={styles.notesText}>{tenant.notes}</Text>
             </View>
           ) : null}
 
@@ -319,7 +322,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Rental Years (Dec-Nov)</Text>
-              <Text style={styles.sectionSubtitle}>Since {formatDate(tenant.mietanfang_datum)}</Text>
+              <Text style={styles.sectionSubtitle}>Since {formatDate(tenant.move_in_date)}</Text>
             </View>
 
             {/* Loop through all fiscal years */}
@@ -399,8 +402,8 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
               {payments.map((payment) => (
                 <View key={payment.id} style={styles.paymentItem}>
                   <View style={styles.paymentInfo}>
-                    <Text style={styles.paymentDate}>{formatDate(payment.datum)}</Text>
-                    <Text style={styles.paymentAmount}>{formatCurrency(payment.betrag)}</Text>
+                    <Text style={styles.paymentDate}>{formatDate(payment.payment_date)}</Text>
+                    <Text style={styles.paymentAmount}>{formatCurrency(payment.amount)}</Text>
                   </View>
                   <TouchableOpacity
                     onPress={() => handleDeletePayment(payment.id)}
@@ -451,16 +454,16 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
               style={styles.input}
               placeholder="0.00"
               keyboardType="decimal-pad"
-              value={newPayment.betrag}
-              onChangeText={(text) => setNewPayment({ ...newPayment, betrag: text })}
+              value={newPayment.amount}
+              onChangeText={(text) => setNewPayment({ ...newPayment, amount: text })}
             />
 
             <Text style={styles.inputLabel}>Date</Text>
             <TextInput
               style={styles.input}
               placeholder="YYYY-MM-DD"
-              value={newPayment.datum}
-              onChangeText={(text) => setNewPayment({ ...newPayment, datum: text })}
+              value={newPayment.payment_date}
+              onChangeText={(text) => setNewPayment({ ...newPayment, payment_date: text })}
             />
 
             <View style={styles.modalButtons}>

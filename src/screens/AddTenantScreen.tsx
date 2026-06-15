@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { createTenant } from '../services/database';
+import { tenantAPI } from '../services/api';
 import type { TenantInput } from '../models';
 
 interface AddTenantScreenProps {
@@ -20,37 +20,38 @@ interface AddTenantScreenProps {
 export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
   const [formData, setFormData] = useState<TenantInput>({
     name: '',
-    mietanfang_datum: new Date().toISOString().split('T')[0],
-    jahresmiete: 0,
-    anmerkungen: '',
+    move_in_date: new Date().toISOString().split('T')[0],
+    annual_rent: 0,
+    notes: '',
+    termination_date: null,
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Validation
     if (!formData.name.trim()) {
       Alert.alert('Error', 'Please enter a name.');
       return;
     }
 
-    if (!formData.mietanfang_datum) {
+    if (!formData.move_in_date) {
       Alert.alert('Error', 'Please enter a start date.');
       return;
     }
 
-    if (formData.jahresmiete <= 0) {
+    if (formData.annual_rent <= 0) {
       Alert.alert('Error', 'Please enter a valid annual rent.');
       return;
     }
 
     // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(formData.mietanfang_datum)) {
+    if (!dateRegex.test(formData.move_in_date)) {
       Alert.alert('Error', 'Date must be in YYYY-MM-DD format.');
       return;
     }
 
     try {
-      createTenant(formData);
+      await tenantAPI.createTenant(formData);
       Alert.alert('Success', 'Tenant was successfully added.', [
         {
           text: 'OK',
@@ -92,8 +93,8 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
             <TextInput
               style={styles.input}
               placeholder="YYYY-MM-DD (e.g. 2024-01-01)"
-              value={formData.mietanfang_datum}
-              onChangeText={(text) => setFormData({ ...formData, mietanfang_datum: text })}
+              value={formData.move_in_date}
+              onChangeText={(text) => setFormData({ ...formData, move_in_date: text })}
             />
             <Text style={styles.hint}>Format: YYYY-MM-DD</Text>
           </View>
@@ -104,14 +105,14 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
               style={styles.input}
               placeholder="e.g. 12000"
               keyboardType="decimal-pad"
-              value={formData.jahresmiete ? String(formData.jahresmiete) : ''}
+              value={formData.annual_rent ? String(formData.annual_rent) : ''}
               onChangeText={(text) => {
                 const value = parseFloat(text) || 0;
-                setFormData({ ...formData, jahresmiete: value });
+                setFormData({ ...formData, annual_rent: value });
               }}
             />
             <Text style={styles.hint}>
-              Monthly Rate: AED {(formData.jahresmiete / 12).toFixed(2)}
+              Monthly Rate: AED {(formData.annual_rent / 12).toFixed(2)}
             </Text>
           </View>
 
@@ -123,8 +124,8 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
               multiline
               numberOfLines={4}
               textAlignVertical="top"
-              value={formData.anmerkungen}
-              onChangeText={(text) => setFormData({ ...formData, anmerkungen: text })}
+              value={formData.notes}
+              onChangeText={(text) => setFormData({ ...formData, notes: text })}
             />
           </View>
         </View>
