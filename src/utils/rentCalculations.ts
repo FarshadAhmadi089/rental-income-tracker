@@ -109,13 +109,13 @@ export const calculateMonthSoll = (
   month: number,
   year: number
 ): number => {
-  const moveInDate = new Date(tenant.mietanfang_datum);
+  const moveInDate = new Date(tenant.move_in_date);
   moveInDate.setHours(0, 0, 0, 0);
 
   const monthStart = new Date(year, month, 1);
   const monthEnd = new Date(year, month + 1, 0); // Last day of month
 
-  const monthlyRate = tenant.jahresmiete / 12;
+  const monthlyRate = tenant.annual_rent / 12;
 
   // If this month is entirely before move-in, SOLL = 0
   if (monthEnd < moveInDate) {
@@ -300,7 +300,7 @@ export const calculateAllFiscalYearsData = (
   tenant: Tenant,
   payments: Payment[]
 ): FiscalYearData[] => {
-  const moveInDate = new Date(tenant.mietanfang_datum);
+  const moveInDate = new Date(tenant.move_in_date);
   moveInDate.setHours(0, 0, 0, 0);
 
   const today = new Date();
@@ -348,7 +348,7 @@ export const calculateAllFiscalYearsData = (
     // 1. Entirely before move-in date (soll=0 and ist=0 and before move-in)
     // 2. Entirely in the future (already handled above for current FY)
     // Keep quarters that have any activity (soll > 0 or ist > 0)
-    const moveInDate = new Date(tenant.mietanfang_datum);
+    const moveInDate = new Date(tenant.move_in_date);
     moveInDate.setHours(0, 0, 0, 0);
 
     fyData.quarters = fyData.quarters.filter(q => {
@@ -459,7 +459,7 @@ export const calculateTenantQuarterlyData = (
   quarter: number
 ): QuarterlyTenantData => {
   const { start, end } = getQuarterDateRange(leaseYear, quarter);
-  const moveInDate = new Date(tenant.mietanfang_datum);
+  const moveInDate = new Date(tenant.move_in_date);
   moveInDate.setHours(0, 0, 0, 0);
 
   // Check if tenant was active during this quarter
@@ -579,14 +579,16 @@ export const getAvailableLeaseYears = (tenants: Tenant[]): number[] => {
     const moveInYear = moveInDate.getFullYear();
 
     // Calculate the first fiscal year this tenant was active
-    // Fiscal year starts in December
+    // Fiscal year is labeled by Jan-Nov year: "Lease year 2023" = Dec 2022 - Nov 2023
     let firstFiscalYear: number;
     if (moveInMonth === 11) {
-      // If moved in December, first fiscal year is this year
-      firstFiscalYear = moveInYear;
+      // If moved in December, that's Q1 of next lease year
+      // Dec 2023 → lease year 2024
+      firstFiscalYear = moveInYear + 1;
     } else {
-      // Otherwise, first fiscal year started last December
-      firstFiscalYear = moveInYear - 1;
+      // If moved in Jan-Nov, that's in the same lease year
+      // Mar 2023 → lease year 2023
+      firstFiscalYear = moveInYear;
     }
 
     // Determine last fiscal year (current or termination date)
@@ -597,9 +599,11 @@ export const getAvailableLeaseYears = (tenants: Tenant[]): number[] => {
       const termYear = terminationDate.getFullYear();
 
       if (termMonth === 11) {
-        lastFiscalYear = termYear;
+        // Dec 2023 → lease year 2024
+        lastFiscalYear = termYear + 1;
       } else {
-        lastFiscalYear = termYear - 1;
+        // Jan-Nov 2023 → lease year 2023
+        lastFiscalYear = termYear;
       }
     } else {
       // Active tenant - use current fiscal year
@@ -607,9 +611,11 @@ export const getAvailableLeaseYears = (tenants: Tenant[]): number[] => {
       const currentYear = today.getFullYear();
 
       if (currentMonth === 11) {
-        lastFiscalYear = currentYear;
+        // Current month is December → current lease year is next year
+        lastFiscalYear = currentYear + 1;
       } else {
-        lastFiscalYear = currentYear - 1;
+        // Current month is Jan-Nov → current lease year is this year
+        lastFiscalYear = currentYear;
       }
     }
 
