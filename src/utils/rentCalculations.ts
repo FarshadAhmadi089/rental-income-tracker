@@ -88,12 +88,12 @@ export const getQuarterLabel = (quarter: number): string => {
 };
 
 /**
- * Get month label (German abbreviated month name + year)
+ * Get month label (English abbreviated month name + year)
  */
 export const getMonthLabel = (month: number, year: number): string => {
   const monthNames = [
-    'Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
   ];
   return `${monthNames[month]} ${year}`;
 };
@@ -642,8 +642,9 @@ export const getAvailableQuarters = (tenants: Tenant[], leaseYear: number): numb
     const moveInDate = new Date(tenant.move_in_date);
 
     // Calculate fiscal year start and end for the selected year
-    const fiscalYearStart = new Date(leaseYear, 11, 1); // December 1st
-    const fiscalYearEnd = new Date(leaseYear + 1, 10, 30); // November 30th
+    // Lease year 2026 = Dec 2025 - Nov 2026
+    const fiscalYearStart = new Date(leaseYear - 1, 11, 1); // December 1st of previous year
+    const fiscalYearEnd = new Date(leaseYear, 10, 30); // November 30th of lease year
 
     // Determine tenant's end date (termination or today)
     const endDate = tenant.termination_date ? new Date(tenant.termination_date) : today;

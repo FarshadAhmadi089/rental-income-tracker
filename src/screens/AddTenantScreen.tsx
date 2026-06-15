@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { tenantAPI } from '../services/api';
 import type { TenantInput } from '../models';
 
@@ -25,6 +26,17 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
     notes: '',
     termination_date: null,
   });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const handleDateChange = (event: any, date?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios'); // Keep open on iOS
+    if (date) {
+      setSelectedDate(date);
+      const formattedDate = date.toISOString().split('T')[0];
+      setFormData({ ...formData, move_in_date: formattedDate });
+    }
+  };
 
   const handleSave = async () => {
     // Validation
@@ -40,13 +52,6 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
 
     if (formData.annual_rent <= 0) {
       Alert.alert('Error', 'Please enter a valid annual rent.');
-      return;
-    }
-
-    // Validate date format
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(formData.move_in_date)) {
-      Alert.alert('Error', 'Date must be in YYYY-MM-DD format.');
       return;
     }
 
@@ -90,13 +95,22 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Move-in Date *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="YYYY-MM-DD (e.g. 2024-01-01)"
-              value={formData.move_in_date}
-              onChangeText={(text) => setFormData({ ...formData, move_in_date: text })}
-            />
-            <Text style={styles.hint}>Format: YYYY-MM-DD</Text>
+            <TouchableOpacity
+              style={styles.datePickerButton}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={styles.datePickerText}>{formData.move_in_date}</Text>
+              <Text style={styles.datePickerIcon}>📅</Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateChange}
+              />
+            )}
+            <Text style={styles.hint}>Tap to select date</Text>
           </View>
 
           <View style={styles.inputGroup}>
@@ -194,6 +208,23 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     paddingTop: 14,
+  },
+  datePickerButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  datePickerText: {
+    fontSize: 16,
+    color: '#111827',
+  },
+  datePickerIcon: {
+    fontSize: 20,
   },
   hint: {
     fontSize: 12,
