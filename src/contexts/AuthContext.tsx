@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
 import { authAPI, userAPI } from '../services/api';
@@ -129,6 +130,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         code: error.code,
         isNetworkError: !error.response,
       });
+
+      // Show detailed error alert for debugging
+      Alert.alert(
+        'Connection Error',
+        `Message: ${error.message}\nURL: ${error.config?.url || 'Unknown'}\nStatus: ${error.response?.status || 'No Response'}`
+      );
 
       // Provide user-friendly error message
       let errorMessage = 'Login failed. Please check your credentials.';
