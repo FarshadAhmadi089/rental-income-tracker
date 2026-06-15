@@ -169,13 +169,13 @@ export const calculateMonthIst = (
 ): number => {
   const total = payments
     .filter(payment => {
-      const paymentDate = new Date(payment.datum);
+      const paymentDate = new Date(payment.payment_date);
       return (
         paymentDate.getMonth() === month &&
         paymentDate.getFullYear() === year
       );
     })
-    .reduce((sum, payment) => sum + payment.betrag, 0);
+    .reduce((sum, payment) => sum + payment.amount, 0);
 
   return total;
 };
@@ -489,11 +489,11 @@ export const calculateTenantQuarterlyData = (
 
   // Calculate payments made in this quarter
   const quarterPayments = payments.filter(payment => {
-    const paymentDate = new Date(payment.datum);
+    const paymentDate = new Date(payment.payment_date);
     return paymentDate >= start && paymentDate <= end;
   });
 
-  const paidTotal = quarterPayments.reduce((sum, p) => sum + p.betrag, 0);
+  const paidTotal = quarterPayments.reduce((sum, p) => sum + p.amount, 0);
   const balance = expectedTotal - paidTotal;
 
   return {
