@@ -2,10 +2,10 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
- * API Base URL - DigitalOcean Server
+ * API Base URL - Production Server with HTTPS
  * IMPORTANT: This is the live server URL
  */
-const DEFAULT_API_URL = 'http://167.172.168.130:8000';
+const DEFAULT_API_URL = 'https://api.takamul-cars.com';
 
 /**
  * Sanitize URL by removing trailing slashes

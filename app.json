@@ -17,7 +17,6 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "usesCleartextTraffic": true,
       "package": "com.farshadahmadi089.rentalincometracker"
     },
     "web": {
