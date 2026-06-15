@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "rental-income-tracker",
+    "name": "Rental Tracker",
     "slug": "rental-income-tracker",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,8 +11,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundColor": "#0d2d5e",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
@@ -26,9 +26,6 @@
       "eas": {
         "projectId": "bd586023-c263-4335-b051-ec4d11f5c3e6"
       }
-    },
-    "plugins": [
-      "@react-native-community/datetimepicker"
-    ]
+    }
   }
 }
