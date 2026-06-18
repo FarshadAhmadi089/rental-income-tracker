@@ -36,6 +36,11 @@
 - Bei erfassten Einzahlungen soll sichtbar sein, welche Rolle die Buchung vorgenommen hat (z. B. „Admin" oder „RentC")
 - Dadurch wird die Nachvollziehbarkeit und Transparenz der Einträge verbessert
 
+**6. Wöchentliches automatisches CSV-Backup per Email**
+- Es soll ein automatischer wöchentlicher Export aller Daten als CSV-Datei implementiert werden
+- Die CSV-Datei soll per Email als Backup versendet werden
+- Dies ermöglicht eine regelmäßige Datensicherung außerhalb des Systems
+
 ---
 
 ## Overview

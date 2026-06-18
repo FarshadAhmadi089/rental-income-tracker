@@ -450,12 +450,14 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
                     <Text style={styles.paymentDate}>{formatDate(payment.payment_date)}</Text>
                     <Text style={styles.paymentAmount}>{formatCurrency(payment.amount)}</Text>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => handleDeletePayment(payment.id)}
-                    style={styles.deleteButton}
-                  >
-                    <Text style={styles.deleteButtonText}>✕</Text>
-                  </TouchableOpacity>
+                  {canAddPayments() && (
+                    <TouchableOpacity
+                      onPress={() => handleDeletePayment(payment.id)}
+                      style={styles.deleteButton}
+                    >
+                      <Text style={styles.deleteButtonText}>✕</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               ))}
             </View>
