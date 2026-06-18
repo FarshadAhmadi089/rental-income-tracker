@@ -366,6 +366,7 @@ export const generateTenantPDF = async (
                   <th>No.</th>
                   <th>Date</th>
                   <th class="amount">Amount</th>
+                  <th>Created By</th>
                 </tr>
               </thead>
               <tbody>
@@ -374,6 +375,24 @@ export const generateTenantPDF = async (
                     <td>${index + 1}</td>
                     <td>${formatDate(payment.payment_date)}</td>
                     <td class="amount">${formatCurrency(payment.amount)}</td>
+                    <td style="font-size: 12px; color: #6B7280;">
+                      ${payment.created_by_role
+                        ? `<span style="background: ${
+                            payment.created_by_role === 'admin' ? '#FEE2E2' :
+                            payment.created_by_role === 'rent_collector' ? '#DBEAFE' :
+                            '#F3F4F6'
+                          }; color: ${
+                            payment.created_by_role === 'admin' ? '#DC2626' :
+                            payment.created_by_role === 'rent_collector' ? '#2563EB' :
+                            '#6B7280'
+                          }; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
+                          ${payment.created_by_role === 'admin' ? 'Admin' :
+                            payment.created_by_role === 'rent_collector' ? 'Rent Collector' :
+                            payment.created_by_role === 'spectator' ? 'Spectator' :
+                            'Unknown'}
+                          </span>`
+                        : '<span style="color: #9CA3AF;">Unknown</span>'}
+                    </td>
                   </tr>
                 `).join('')}
               </tbody>

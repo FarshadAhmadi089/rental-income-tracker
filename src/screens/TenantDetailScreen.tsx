@@ -25,6 +25,40 @@ interface TenantDetailScreenProps {
   navigation: any;
 }
 
+/**
+ * Format role name for display
+ */
+const formatRole = (role?: string): string => {
+  if (!role) return 'Unknown';
+  switch (role.toLowerCase()) {
+    case 'admin':
+      return 'Admin';
+    case 'rent_collector':
+      return 'Rent Collector';
+    case 'spectator':
+      return 'Spectator';
+    default:
+      return 'Unknown';
+  }
+};
+
+/**
+ * Get badge color for role
+ */
+const getRoleBadgeColor = (role?: string): string => {
+  if (!role) return '#9CA3AF';
+  switch (role.toLowerCase()) {
+    case 'admin':
+      return '#EF4444'; // Red
+    case 'rent_collector':
+      return '#2563EB'; // Blue
+    case 'spectator':
+      return '#6B7280'; // Gray
+    default:
+      return '#9CA3AF';
+  }
+};
+
 export default function TenantDetailScreen({ route, navigation }: TenantDetailScreenProps) {
   const { tenantId } = route.params;
   const { canAddPayments, canEditTenants, canDeleteTenants } = useAuth();
@@ -447,8 +481,26 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
               {payments.map((payment) => (
                 <View key={payment.id} style={styles.paymentItem}>
                   <View style={styles.paymentInfo}>
-                    <Text style={styles.paymentDate}>{formatDate(payment.payment_date)}</Text>
-                    <Text style={styles.paymentAmount}>{formatCurrency(payment.amount)}</Text>
+                    <View style={styles.paymentMainRow}>
+                      <Text style={styles.paymentDate}>{formatDate(payment.payment_date)}</Text>
+                      <Text style={styles.paymentAmount}>{formatCurrency(payment.amount)}</Text>
+                    </View>
+                    {payment.created_by_role && (
+                      <View style={styles.paymentMetaRow}>
+                        <Text style={styles.createdByLabel}>by </Text>
+                        <View style={[
+                          styles.roleBadge,
+                          { backgroundColor: getRoleBadgeColor(payment.created_by_role) + '20' }
+                        ]}>
+                          <Text style={[
+                            styles.roleBadgeText,
+                            { color: getRoleBadgeColor(payment.created_by_role) }
+                          ]}>
+                            {formatRole(payment.created_by_role)}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
                   </View>
                   {canAddPayments() && (
                     <TouchableOpacity
@@ -779,8 +831,11 @@ const styles = StyleSheet.create({
   },
   paymentInfo: {
     flex: 1,
+  },
+  paymentMainRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   paymentDate: {
     fontSize: 14,
@@ -790,6 +845,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
+  },
+  paymentMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  createdByLabel: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  roleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  roleBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   deleteButton: {
     marginLeft: 12,

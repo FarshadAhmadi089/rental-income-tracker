@@ -8,9 +8,11 @@ export interface Payment {
   payment_date: string; // Payment date (ISO date string YYYY-MM-DD)
   amount: number; // Amount paid in AED
   created_at?: string; // Timestamp
+  created_by_id?: string; // User ID who created this payment
+  created_by_role?: string; // Role of creator: admin, rent_collector, spectator
 }
 
 /**
- * Input type for creating a new payment (without id, created_at)
+ * Input type for creating a new payment (without id, created_at, creator fields)
  */
-export type PaymentInput = Omit<Payment, 'id' | 'created_at'>;
+export type PaymentInput = Omit<Payment, 'id' | 'created_at' | 'created_by_id' | 'created_by_role'>;
