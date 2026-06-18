@@ -318,6 +318,15 @@ export const tenantAPI = {
   },
 
   /**
+   * Update tenant name only (PATCH)
+   * Only admin and rent_collector can rename tenants
+   */
+  updateTenantName: async (tenantId: string, name: string) => {
+    const response = await api.patch(`/api/tenants/${tenantId}`, { name });
+    return response.data;
+  },
+
+  /**
    * Delete a tenant
    */
   deleteTenant: async (tenantId: string) => {

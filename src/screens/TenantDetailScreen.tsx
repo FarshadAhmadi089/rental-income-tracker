@@ -74,6 +74,9 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
     payment_date: new Date().toISOString().split('T')[0], // Today's date
   });
   const [terminationDate, setTerminationDate] = useState('');
+  const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [newTenantName, setNewTenantName] = useState('');
+  const [isRenamingTenant, setIsRenamingTenant] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -222,6 +225,42 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
     );
   };
 
+  const handleOpenRenameModal = () => {
+    if (!tenant) return;
+    setNewTenantName(tenant.name);
+    setRenameModalVisible(true);
+  };
+
+  const handleRenameTenant = async () => {
+    if (!tenant) return;
+
+    // Validation
+    if (!newTenantName || newTenantName.trim() === '') {
+      Alert.alert('Error', 'Tenant name cannot be empty');
+      return;
+    }
+
+    if (newTenantName.trim() === tenant.name) {
+      // No change
+      setRenameModalVisible(false);
+      return;
+    }
+
+    setIsRenamingTenant(true);
+    try {
+      await tenantAPI.updateTenantName(String(tenantId), newTenantName.trim());
+      await loadData();
+      setRenameModalVisible(false);
+      Alert.alert('Success', 'Tenant name was updated successfully');
+    } catch (error: any) {
+      console.error('Error renaming tenant:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to rename tenant';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsRenamingTenant(false);
+    }
+  };
+
   const handleDeleteTenant = () => {
     if (!tenant) return;
 
@@ -282,7 +321,14 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
             <Text style={styles.pdfButtonText}>📄 PDF</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.title}>{tenant.name}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{tenant.name}</Text>
+          {canEditTenants() && (
+            <TouchableOpacity onPress={handleOpenRenameModal} style={styles.editNameButton}>
+              <Text style={styles.editNameIcon}>✏️</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <Text style={styles.subtitle}>Since {formatDate(tenant.move_in_date)}</Text>
       </View>
 
@@ -621,6 +667,50 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
           </View>
         </View>
       </Modal>
+
+      {/* Rename Tenant Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={renameModalVisible}
+        onRequestClose={() => setRenameModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Rename Tenant</Text>
+
+            <Text style={styles.inputLabel}>Tenant Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter new name"
+              value={newTenantName}
+              onChangeText={setNewTenantName}
+              autoFocus={true}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setRenameModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={handleRenameTenant}
+                disabled={isRenamingTenant}
+              >
+                {isRenamingTenant ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -660,11 +750,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 4,
+  },
+  editNameButton: {
+    marginLeft: 12,
+    padding: 4,
+  },
+  editNameIcon: {
+    fontSize: 20,
   },
   subtitle: {
     fontSize: 14,
