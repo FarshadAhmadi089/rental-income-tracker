@@ -21,11 +21,6 @@
 - Die Email wird von vielen Mail-Providern als Spam markiert
 - Es muss geprüft werden, wie dies verhindert werden kann (z. B. durch SPF, DKIM, DMARC, saubere Absenderdomain, korrektes HTML-Template)
 
-**3. Wöchentliches automatisches CSV-Backup per Email**
-- Es soll ein automatischer wöchentlicher Export aller Daten als CSV-Datei implementiert werden
-- Die CSV-Datei soll per Email als Backup versendet werden
-- Dies ermöglicht eine regelmäßige Datensicherung außerhalb des Systems
-
 ---
 
 ## Overview
