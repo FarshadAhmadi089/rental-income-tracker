@@ -9,6 +9,39 @@
 
 ---
 
+## Zukünftige Änderungen
+
+### Frontend/Mobile Verbesserungen
+
+**1. Nachträgliche Namensänderung ermöglichen**
+- Aktuell können bestehende Einträge nicht umbenannt werden
+- Die Funktion soll ergänzt werden, sodass Namen jederzeit editierbar sind
+
+**2. UI-Problem auf mobilen Geräten beheben**
+- Die untere System-/Navigationsleiste des Smartphones überdeckt Buttons, die am unteren Bildschirmrand fixiert sind
+- Das Layout muss so angepasst werden, dass alle Buttons sichtbar und bedienbar bleiben
+
+**3. Verbesserung der Quartalsübersicht im „Detailed Tenant Screen" auf kleinen Displays**
+- Auf kleineren Smartphone-Bildschirmen werden viele Werte in der Quartalsübersicht auf mehrere Zeilen umgebrochen, da der Platz pro Zeile nicht ausreicht
+- Das Layout soll optimiert werden, indem redundante Informationen entfernt werden, insbesondere die wiederholte Anzeige der Währung AED bei jedem Betrag
+- Dadurch wird die Darstellung kompakter und deutlich besser lesbar
+
+### Backend/Email Verbesserungen
+
+**4. Einladungsemail überarbeiten (Backend-TODO)**
+- Die aktuelle Einladungsemail enthält einen „Login"-Button, der ins Leere führt
+- Dieser Button muss entfernt oder durch einen funktionierenden Link ersetzt werden
+
+**5. Einladungsemail landet im Spam-Ordner**
+- Die Email wird von vielen Mail-Providern als Spam markiert
+- Es muss geprüft werden, wie dies verhindert werden kann (z. B. durch SPF, DKIM, DMARC, saubere Absenderdomain, korrektes HTML-Template)
+
+**6. Einzahlungen: Rolle des Erstellers anzeigen**
+- Bei erfassten Einzahlungen soll sichtbar sein, welche Rolle die Buchung vorgenommen hat (z. B. „Admin" oder „RentC")
+- Dadurch wird die Nachvollziehbarkeit und Transparenz der Einträge verbessert
+
+---
+
 ## Overview
 
 Rental Tracker is a full-stack mobile application built with React Native and Expo, designed to simplify rental property management for the UAE market. The app features a custom fiscal year system (December-November), role-based access control, quarterly reporting, and PDF generation capabilities.
