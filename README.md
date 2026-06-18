@@ -11,27 +11,17 @@
 
 ## Zukünftige Änderungen
 
-### Frontend/Mobile Verbesserungen
-
-**1. Nachträgliche Namensänderung ermöglichen**
-- Aktuell können bestehende Einträge nicht umbenannt werden
-- Die Funktion soll ergänzt werden, sodass Namen jederzeit editierbar sind
-
 ### Backend/Email Verbesserungen
 
-**3. Einladungsemail überarbeiten (Backend-TODO)**
+**1. Einladungsemail überarbeiten (Backend-TODO)**
 - Die aktuelle Einladungsemail enthält einen „Login"-Button, der ins Leere führt
 - Dieser Button muss entfernt oder durch einen funktionierenden Link ersetzt werden
 
-**4. Einladungsemail landet im Spam-Ordner**
+**2. Einladungsemail landet im Spam-Ordner**
 - Die Email wird von vielen Mail-Providern als Spam markiert
 - Es muss geprüft werden, wie dies verhindert werden kann (z. B. durch SPF, DKIM, DMARC, saubere Absenderdomain, korrektes HTML-Template)
 
-**5. Einzahlungen: Rolle des Erstellers anzeigen**
-- Bei erfassten Einzahlungen soll sichtbar sein, welche Rolle die Buchung vorgenommen hat (z. B. „Admin" oder „RentC")
-- Dadurch wird die Nachvollziehbarkeit und Transparenz der Einträge verbessert
-
-**6. Wöchentliches automatisches CSV-Backup per Email**
+**3. Wöchentliches automatisches CSV-Backup per Email**
 - Es soll ein automatischer wöchentlicher Export aller Daten als CSV-Datei implementiert werden
 - Die CSV-Datei soll per Email als Backup versendet werden
 - Dies ermöglicht eine regelmäßige Datensicherung außerhalb des Systems
