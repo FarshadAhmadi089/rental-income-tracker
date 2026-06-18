@@ -264,6 +264,14 @@ export const userAPI = {
     });
     return response.data;
   },
+
+  /**
+   * Get collector statistics (Admin only)
+   */
+  getCollectorStats: async (userId: string) => {
+    const response = await api.get(`/api/users/${userId}/stats`);
+    return response.data;
+  },
 };
 
 /**

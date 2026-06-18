@@ -14,12 +14,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, type UserRole } from '../contexts/AuthContext';
 import { userAPI } from '../services/api';
+import { formatLastSeen } from '../utils/timeUtils';
 
 interface TeamMember {
   id: string;
   email: string;
   role: UserRole;
   name?: string;
+  last_seen?: string | null;
 }
 
 interface TeamManagementScreenProps {
@@ -62,6 +64,7 @@ export default function TeamManagementScreen({ navigation }: TeamManagementScree
         email: u.email,
         role: u.role,
         name: u.name || u.email.split('@')[0],
+        last_seen: u.last_seen || null,
       }));
 
       setTeamMembers(mappedUsers);
@@ -263,6 +266,7 @@ export default function TeamManagementScreen({ navigation }: TeamManagementScree
     const roleColor = getRoleColor(item.role);
     const isDeleting = deletingUserId === item.id;
     const isCurrentUser = user && item.id === user.id;
+    const activityStatus = formatLastSeen(item.last_seen);
 
     return (
       <View style={styles.memberCard}>
@@ -274,35 +278,58 @@ export default function TeamManagementScreen({ navigation }: TeamManagementScree
             )}
           </View>
           <Text style={styles.memberEmail}>{item.email}</Text>
-          <View style={[styles.roleBadge, { backgroundColor: roleColor + '20' }]}>
-            <Text style={[styles.roleText, { color: roleColor }]}>
-              {getRoleLabel(item.role)}
-            </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+            <View style={[styles.roleBadge, { backgroundColor: roleColor + '20' }]}>
+              <Text style={[styles.roleText, { color: roleColor }]}>
+                {getRoleLabel(item.role)}
+              </Text>
+            </View>
+            {/* Activity status indicator */}
+            <View style={styles.activityContainer}>
+              <View style={[styles.activityDot, { backgroundColor: activityStatus.color }]} />
+              <Text style={styles.activityText}>{activityStatus.text}</Text>
+            </View>
           </View>
         </View>
-        {!isCurrentUser && item.role !== 'admin' && (
-          <View style={styles.actionButtons}>
+        <View style={styles.actionButtons}>
+          {/* View Stats button - only for rent collectors */}
+          {item.role === 'rent_collector' && (
             <TouchableOpacity
-              style={styles.passwordButton}
-              onPress={() => handleOpenPasswordModal(item)}
+              style={styles.statsButton}
+              onPress={() => navigation.navigate('CollectorStats', {
+                userId: item.id,
+                userName: item.name || item.email
+              })}
               activeOpacity={0.7}
             >
-              <Text style={styles.passwordButtonText}>🔐</Text>
+              <Text style={styles.statsButtonText}>📊</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.removeButton}
-              onPress={() => handleRemoveMember(item)}
-              activeOpacity={0.7}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <ActivityIndicator size="small" color="#EF4444" />
-              ) : (
-                <Text style={styles.removeButtonText}>🗑️</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
+          )}
+          {/* Password and remove buttons - only for non-admin, non-current users */}
+          {!isCurrentUser && item.role !== 'admin' && (
+            <>
+              <TouchableOpacity
+                style={styles.passwordButton}
+                onPress={() => handleOpenPasswordModal(item)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.passwordButtonText}>🔐</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.removeButton}
+                onPress={() => handleRemoveMember(item)}
+                activeOpacity={0.7}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#EF4444" />
+                ) : (
+                  <Text style={styles.removeButtonText}>🗑️</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </View>
     );
   };
@@ -594,6 +621,12 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: 'center',
   },
+  statsButton: {
+    padding: 8,
+  },
+  statsButtonText: {
+    fontSize: 20,
+  },
   passwordButton: {
     padding: 8,
   },
@@ -740,5 +773,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  activityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  activityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  activityText: {
+    fontSize: 11,
+    color: '#6B7280',
   },
 });

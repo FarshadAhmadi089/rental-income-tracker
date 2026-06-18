@@ -11,6 +11,7 @@ import {
   AddTenantScreen,
   TeamManagementScreen,
 } from './src/screens';
+import CollectorStatsScreen from './src/screens/CollectorStatsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -46,6 +47,7 @@ const AppStack = () => {
       <Stack.Screen name="TenantDetail" component={TenantDetailScreen} />
       <Stack.Screen name="AddTenant" component={AddTenantScreen} />
       <Stack.Screen name="TeamManagement" component={TeamManagementScreen} />
+      <Stack.Screen name="CollectorStats" component={CollectorStatsScreen} />
     </Stack.Navigator>
   );
 };
