@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { tenantAPI, paymentAPI, userAPI } from '../services/api';
 import { getAllTenantBalances, formatCurrency } from '../services/calculationService';
@@ -32,6 +33,7 @@ interface TenantSection {
 
 export default function DashboardScreen({ navigation }: DashboardScreenProps) {
   const { user, logout, canEditTenants, canManageTeam } = useAuth();
+  const insets = useSafeAreaInsets();
   const [sections, setSections] = useState<TenantSection[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -345,7 +347,7 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
       {/* Add Tenant FAB - Only for Admin & Rent Collector */}
       {canEditTenants() && (
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { bottom: 20 + insets.bottom }]}
           onPress={() => navigation.navigate('AddTenant')}
           activeOpacity={0.8}
         >
@@ -727,7 +729,6 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 20,
     width: 60,
     height: 60,
     borderRadius: 30,

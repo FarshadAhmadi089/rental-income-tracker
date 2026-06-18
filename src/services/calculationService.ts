@@ -138,6 +138,16 @@ export const formatCurrency = (amount: number): string => {
 };
 
 /**
+ * Format number without currency symbol (for compact displays)
+ */
+export const formatNumber = (amount: number): string => {
+  return new Intl.NumberFormat('en-AE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
+
+/**
  * Format date for display
  */
 export const formatDate = (dateString: string): string => {

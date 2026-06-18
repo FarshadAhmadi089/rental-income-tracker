@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tenantAPI } from '../services/api';
 import type { TenantInput } from '../models';
 
@@ -19,6 +20,7 @@ interface AddTenantScreenProps {
 }
 
 export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
+  const insets = useSafeAreaInsets();
   const [formData, setFormData] = useState<TenantInput>({
     name: '',
     move_in_date: new Date().toISOString().split('T')[0],
@@ -145,7 +147,7 @@ export default function AddTenantScreen({ navigation }: AddTenantScreenProps) {
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 20 + insets.bottom }]}>
         <TouchableOpacity
           style={styles.saveButton}
           onPress={handleSave}
@@ -232,7 +234,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   footer: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',

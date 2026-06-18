@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, type UserRole } from '../contexts/AuthContext';
 import { userAPI } from '../services/api';
 
@@ -27,6 +28,7 @@ interface TeamManagementScreenProps {
 
 export default function TeamManagementScreen({ navigation }: TeamManagementScreenProps) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -346,7 +348,7 @@ export default function TeamManagementScreen({ navigation }: TeamManagementScree
 
       {/* Invite Button */}
       <TouchableOpacity
-        style={styles.inviteButton}
+        style={[styles.inviteButton, { bottom: 20 + insets.bottom }]}
         onPress={() => setModalVisible(true)}
         activeOpacity={0.8}
       >
@@ -632,7 +634,6 @@ const styles = StyleSheet.create({
   },
   inviteButton: {
     position: 'absolute',
-    bottom: 20,
     left: 20,
     right: 20,
     backgroundColor: '#2563EB',

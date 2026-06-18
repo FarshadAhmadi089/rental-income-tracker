@@ -11,9 +11,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { tenantAPI, paymentAPI } from '../services/api';
-import { getTenantBalance, formatCurrency, formatDate } from '../services/calculationService';
+import { getTenantBalance, formatCurrency, formatNumber, formatDate } from '../services/calculationService';
 import { generateTenantPDF } from '../services/pdfService';
 import { calculateFiscalYearData } from '../utils/rentCalculations';
 import type { Tenant, Payment, PaymentInput } from '../models';
@@ -27,6 +28,7 @@ interface TenantDetailScreenProps {
 export default function TenantDetailScreen({ route, navigation }: TenantDetailScreenProps) {
   const { tenantId } = route.params;
   const { canAddPayments, canEditTenants, canDeleteTenants } = useAuth();
+  const insets = useSafeAreaInsets();
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [balance, setBalance] = useState<any>(null);
@@ -339,23 +341,41 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
               <View key={fiscalYearData.fiscalYear} style={fyIndex > 0 ? styles.fiscalYearSeparator : null}>
                 {/* Year Total */}
                 <View style={styles.fiscalYearRow}>
-                  <Text style={styles.fiscalYearLabel}>Year {fiscalYearData.fiscalYear}</Text>
-                  <Text style={styles.fiscalYearValue}>{formatCurrency(fiscalYearData.soll)}</Text>
-                  <Text style={styles.fiscalYearValue}>{formatCurrency(fiscalYearData.ist)}</Text>
-                  <Text style={[
-                    styles.fiscalYearValue,
-                    fiscalYearData.differenz < 0 ? styles.positiveValue : styles.negativeValue
-                  ]}>
-                    {formatCurrency(fiscalYearData.differenz)}
-                  </Text>
+                  <View style={styles.fiscalYearCellContainer}>
+                    <Text style={styles.fiscalYearLabel}>
+                      Year {fiscalYearData.fiscalYear.replace('/', '/\n')}
+                    </Text>
+                  </View>
+                  <View style={styles.fiscalYearValueContainer}>
+                    <Text style={styles.fiscalYearValue}>{formatNumber(fiscalYearData.soll)}</Text>
+                  </View>
+                  <View style={styles.fiscalYearValueContainer}>
+                    <Text style={styles.fiscalYearValue}>{formatNumber(fiscalYearData.ist)}</Text>
+                  </View>
+                  <View style={[styles.fiscalYearValueContainer, styles.lastCell]}>
+                    <Text style={[
+                      styles.fiscalYearValue,
+                      fiscalYearData.differenz < 0 ? styles.positiveValue : styles.negativeValue
+                    ]}>
+                      {formatNumber(fiscalYearData.differenz)}
+                    </Text>
+                  </View>
                 </View>
 
                 {/* Table Header */}
                 <View style={styles.fiscalTableHeader}>
-                  <Text style={styles.fiscalHeaderCell}>Period</Text>
-                  <Text style={styles.fiscalHeaderCellRight}>Exp.</Text>
-                  <Text style={styles.fiscalHeaderCellRight}>Act.</Text>
-                  <Text style={styles.fiscalHeaderCellRight}>Diff.</Text>
+                  <View style={styles.fiscalHeaderCellContainer}>
+                    <Text style={styles.fiscalHeaderCell}>Period</Text>
+                  </View>
+                  <View style={styles.fiscalHeaderCellRightContainer}>
+                    <Text style={styles.fiscalHeaderCellRight}>Exp. (AED)</Text>
+                  </View>
+                  <View style={styles.fiscalHeaderCellRightContainer}>
+                    <Text style={styles.fiscalHeaderCellRight}>Act. (AED)</Text>
+                  </View>
+                  <View style={[styles.fiscalHeaderCellRightContainer, styles.lastCell]}>
+                    <Text style={styles.fiscalHeaderCellRight}>Diff. (AED)</Text>
+                  </View>
                 </View>
 
                 {/* Quarters and Months */}
@@ -363,29 +383,45 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
                   <View key={`${fiscalYearData.fiscalYear}-Q${quarter.quarter}`}>
                     {/* Quarter Row */}
                     <View style={styles.fiscalQuarterRow}>
-                      <Text style={styles.fiscalQuarterLabel}>{quarter.label}</Text>
-                      <Text style={styles.fiscalQuarterValue}>{formatCurrency(quarter.soll)}</Text>
-                      <Text style={styles.fiscalQuarterValue}>{formatCurrency(quarter.ist)}</Text>
-                      <Text style={[
-                        styles.fiscalQuarterValue,
-                        quarter.differenz < 0 ? styles.positiveValue : styles.negativeValue
-                      ]}>
-                        {formatCurrency(quarter.differenz)}
-                      </Text>
+                      <View style={styles.fiscalQuarterCellContainer}>
+                        <Text style={styles.fiscalQuarterLabel}>{quarter.label}</Text>
+                      </View>
+                      <View style={styles.fiscalQuarterValueContainer}>
+                        <Text style={styles.fiscalQuarterValue}>{formatNumber(quarter.soll)}</Text>
+                      </View>
+                      <View style={styles.fiscalQuarterValueContainer}>
+                        <Text style={styles.fiscalQuarterValue}>{formatNumber(quarter.ist)}</Text>
+                      </View>
+                      <View style={[styles.fiscalQuarterValueContainer, styles.lastCell]}>
+                        <Text style={[
+                          styles.fiscalQuarterValue,
+                          quarter.differenz < 0 ? styles.positiveValue : styles.negativeValue
+                        ]}>
+                          {formatNumber(quarter.differenz)}
+                        </Text>
+                      </View>
                     </View>
 
                     {/* Month Rows */}
                     {quarter.months.map((month) => (
                       <View key={`${month.year}-${month.month}`} style={styles.fiscalMonthRow}>
-                        <Text style={styles.fiscalMonthLabel}>{month.label}</Text>
-                        <Text style={styles.fiscalMonthValue}>{formatCurrency(month.soll)}</Text>
-                        <Text style={styles.fiscalMonthValue}>{formatCurrency(month.ist)}</Text>
-                        <Text style={[
-                          styles.fiscalMonthValue,
-                          month.differenz < 0 ? styles.positiveValue : styles.negativeValue
-                        ]}>
-                          {formatCurrency(month.differenz)}
-                        </Text>
+                        <View style={styles.fiscalMonthCellContainer}>
+                          <Text style={styles.fiscalMonthLabel}>{month.label}</Text>
+                        </View>
+                        <View style={styles.fiscalMonthValueContainer}>
+                          <Text style={styles.fiscalMonthValue}>{formatNumber(month.soll)}</Text>
+                        </View>
+                        <View style={styles.fiscalMonthValueContainer}>
+                          <Text style={styles.fiscalMonthValue}>{formatNumber(month.ist)}</Text>
+                        </View>
+                        <View style={[styles.fiscalMonthValueContainer, styles.lastCell]}>
+                          <Text style={[
+                            styles.fiscalMonthValue,
+                            month.differenz < 0 ? styles.positiveValue : styles.negativeValue
+                          ]}>
+                            {formatNumber(month.differenz)}
+                          </Text>
+                        </View>
                       </View>
                     ))}
                   </View>
@@ -439,7 +475,7 @@ export default function TenantDetailScreen({ route, navigation }: TenantDetailSc
       {/* Add Payment Button - Admin & Rent Collector Only */}
       {canAddPayments() && (
         <TouchableOpacity
-          style={styles.addButton}
+          style={[styles.addButton, { marginBottom: 16 + insets.bottom }]}
           onPress={() => setModalVisible(true)}
           activeOpacity={0.8}
         >
@@ -771,7 +807,8 @@ const styles = StyleSheet.create({
   },
   addButton: {
     backgroundColor: '#2563EB',
-    margin: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -864,7 +901,6 @@ const styles = StyleSheet.create({
   },
   fiscalYearRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 16,
     backgroundColor: '#EFF6FF',
@@ -873,14 +909,25 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#2563EB',
   },
+  fiscalYearCellContainer: {
+    flex: 4,
+    borderRightWidth: 1,
+    borderRightColor: '#BFDBFE',
+    paddingRight: 8,
+  },
+  fiscalYearValueContainer: {
+    flex: 5,
+    borderRightWidth: 1,
+    borderRightColor: '#BFDBFE',
+    paddingRight: 8,
+    paddingLeft: 8,
+  },
   fiscalYearLabel: {
-    flex: 2,
     fontSize: 16,
     fontWeight: '700',
     color: '#1E40AF',
   },
   fiscalYearValue: {
-    flex: 1,
     fontSize: 14,
     fontWeight: '700',
     color: '#1E40AF',
@@ -888,7 +935,6 @@ const styles = StyleSheet.create({
   },
   fiscalTableHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     paddingVertical: 8,
     paddingHorizontal: 16,
     backgroundColor: '#F3F4F6',
@@ -897,14 +943,25 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     marginBottom: 8,
   },
+  fiscalHeaderCellContainer: {
+    flex: 4,
+    borderRightWidth: 1,
+    borderRightColor: '#D1D5DB',
+    paddingRight: 8,
+  },
+  fiscalHeaderCellRightContainer: {
+    flex: 5,
+    borderRightWidth: 1,
+    borderRightColor: '#D1D5DB',
+    paddingRight: 8,
+    paddingLeft: 8,
+  },
   fiscalHeaderCell: {
-    flex: 2,
     fontSize: 12,
     fontWeight: '600',
     color: '#6B7280',
   },
   fiscalHeaderCellRight: {
-    flex: 1,
     fontSize: 12,
     fontWeight: '600',
     color: '#6B7280',
@@ -912,21 +969,31 @@ const styles = StyleSheet.create({
   },
   fiscalQuarterRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     paddingVertical: 10,
     paddingHorizontal: 16,
     backgroundColor: '#F9FAFB',
     borderRadius: 6,
     marginBottom: 4,
   },
+  fiscalQuarterCellContainer: {
+    flex: 4,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    paddingRight: 8,
+  },
+  fiscalQuarterValueContainer: {
+    flex: 5,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    paddingRight: 8,
+    paddingLeft: 8,
+  },
   fiscalQuarterLabel: {
-    flex: 2,
     fontSize: 14,
     fontWeight: '600',
     color: '#374151',
   },
   fiscalQuarterValue: {
-    flex: 1,
     fontSize: 13,
     fontWeight: '600',
     color: '#374151',
@@ -934,23 +1001,30 @@ const styles = StyleSheet.create({
   },
   fiscalMonthRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    paddingLeft: 32,
     backgroundColor: '#FFFFFF',
-    borderLeftWidth: 2,
-    borderLeftColor: '#E5E7EB',
-    marginLeft: 12,
     marginBottom: 2,
   },
+  fiscalMonthCellContainer: {
+    flex: 4,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    paddingRight: 8,
+  },
+  fiscalMonthValueContainer: {
+    flex: 5,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    paddingRight: 8,
+    paddingLeft: 8,
+  },
   fiscalMonthLabel: {
-    flex: 2,
     fontSize: 13,
     color: '#6B7280',
+    marginLeft: 16,
   },
   fiscalMonthValue: {
-    flex: 1,
     fontSize: 12,
     color: '#6B7280',
     textAlign: 'right',
@@ -962,5 +1036,8 @@ const styles = StyleSheet.create({
   negativeValue: {
     color: '#EF4444',
     fontWeight: '600',
+  },
+  lastCell: {
+    borderRightWidth: 0,
   },
 });
