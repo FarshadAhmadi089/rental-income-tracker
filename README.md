@@ -17,11 +17,6 @@
 - Aktuell können bestehende Einträge nicht umbenannt werden
 - Die Funktion soll ergänzt werden, sodass Namen jederzeit editierbar sind
 
-**2. Online-Status und "Zuletzt online" im Team Management**
-- Im Team Management Screen soll für Admins der Online-Status der Benutzer angezeigt werden
-- Zusätzlich soll angezeigt werden, wann ein Benutzer zuletzt online war
-- Dies ermöglicht Admins zu sehen, welche Teammitglieder aktiv sind
-
 ### Backend/Email Verbesserungen
 
 **3. Einladungsemail überarbeiten (Backend-TODO)**
@@ -55,6 +50,8 @@ Rental Tracker is a full-stack mobile application built with React Native and Ex
 
 ### Key Features
 - **Multi-User System** with role-based access (Admin, Rent Collector, Spectator)
+- **User Activity Tracking** with real-time "last seen" indicators
+- **Collector Performance Statistics** with interactive charts and analytics
 - **Custom Fiscal Year** (December to November with shifted quarters)
 - **Quarterly Breakdowns** with Soll/Ist/Differenz (Expected/Actual/Outstanding)
 - **PDF Generation** for individual tenant reports and global quarterly reports
@@ -79,7 +76,8 @@ Rental Tracker follows a client-server architecture with a mobile frontend, REST
   - `DashboardScreen` - Main view with tenant list and global reports
   - `TenantDetailScreen` - Individual tenant details and quarterly breakdowns
   - `AddTenantScreen` - Create new tenant entries
-  - `TeamManagementScreen` - User management (Admin only)
+  - `TeamManagementScreen` - User management with activity tracking (Admin only)
+  - `CollectorStatsScreen` - Performance analytics for rent collectors (Admin only)
 - **State Management**: React Context API (`AuthContext`)
 - **API Communication**: Axios with JWT interceptors (`src/services/api.ts`)
 - **Business Logic**: `src/utils/rentCalculations.ts` handles all fiscal year calculations
@@ -144,6 +142,28 @@ Rental Tracker follows a client-server architecture with a mobile frontend, REST
 
 ## Key Features
 
+### User Activity Tracking
+- **Real-time activity status** for all team members
+- **Color-coded indicators**:
+  - 🟢 **Green "Active now"**: User active within last 5 minutes
+  - 🟡 **Yellow "X minutes ago"**: User active within last hour
+  - ⚫ **Gray "X hours/days ago"**: Older activity
+- **Automatic tracking**: `last_seen` timestamp updated on every API request
+- **Privacy-friendly**: Efficient 1-minute threshold to reduce database writes
+- **Visible to admins** in Team Management screen
+
+### Collector Performance Statistics
+- **Comprehensive analytics** for rent collectors (Admin only)
+- **Key metrics**:
+  - All-time collection totals and payment counts
+  - This week vs last week comparison with % change
+  - This month vs last month comparison with % change
+- **Interactive charts**:
+  - **Line chart**: Daily collections over last 30 days
+  - **Bar chart**: Monthly collections over last 6 months
+- **Empty state handling**: Graceful display when no data available
+- **AED currency formatting** throughout
+
 ### Custom Lease Year System
 - **Lease year runs December to November** (e.g., "Lease Year 2026" = Dec 2025 → Nov 2026)
 - **December belongs to the NEW lease year** (Dec 2025 is part of Lease Year 2026)
@@ -174,6 +194,8 @@ Rental Tracker follows a client-server architecture with a mobile frontend, REST
 | Delete tenants | ✅ | ❌ | ❌ |
 | Manage team | ✅ | ❌ | ❌ |
 | Create users | ✅ | ❌ | ❌ |
+| View activity status | ✅ | ❌ | ❌ |
+| View collector statistics | ✅ | ❌ | ❌ |
 
 ---
 
@@ -190,7 +212,8 @@ rental-income-tracker/
 │   │   ├── DashboardScreen.tsx     # Main screen, tenant list, global reports
 │   │   ├── TenantDetailScreen.tsx  # Individual tenant details, payments, quarterly view
 │   │   ├── AddTenantScreen.tsx     # Create new tenant
-│   │   ├── TeamManagementScreen.tsx # User management (Admin only)
+│   │   ├── TeamManagementScreen.tsx # User management with activity tracking (Admin only)
+│   │   ├── CollectorStatsScreen.tsx # Performance analytics with charts (Admin only)
 │   │   └── index.ts                # Screen exports
 │   ├── services/
 │   │   ├── api.ts                  # Axios instance, API endpoints, JWT interceptors
@@ -201,9 +224,11 @@ rental-income-tracker/
 │   ├── models/
 │   │   ├── Tenant.ts               # Tenant interface
 │   │   ├── Payment.ts              # Payment interface
+│   │   ├── User.ts                 # User interface with last_seen
 │   │   └── index.ts                # Model exports
 │   └── utils/
-│       └── rentCalculations.ts     # Core business logic: fiscal years, quarters, Soll/Ist
+│       ├── rentCalculations.ts     # Core business logic: fiscal years, quarters, Soll/Ist
+│       └── timeUtils.ts            # Time formatting utilities (last seen, activity status)
 ├── App.tsx                         # Navigation, AuthProvider, stack navigators
 ├── app.json                        # Expo configuration
 ├── eas.json                        # EAS Build configuration
@@ -423,6 +448,8 @@ Refer to `.env.example` in the repository for all variables.
 | expo-sharing | ~14.0.8 | File sharing |
 | jwt-decode | ^4.0.0 | JWT token decoding |
 | AsyncStorage | ^2.2.0 | Local storage |
+| react-native-chart-kit | ^6.12.0 | Chart visualization (LineChart, BarChart) |
+| react-native-svg | ^16.11.1 | SVG rendering for charts |
 
 ### Backend
 | Technology | Purpose |
