@@ -311,14 +311,20 @@ export default function ExpensesScreen({ navigation }: ExpensesScreenProps) {
         </View>
         {expense.photo_paths && expense.photo_paths.length > 0 && (
           <View style={styles.receiptPhotosContainer}>
-            <Text style={styles.receiptLabel}>📎 Receipts:</Text>
+            <Text style={styles.receiptLabel}>📎 Receipts ({expense.photo_paths.length}):</Text>
             <View style={styles.receiptPhotosRow}>
               {expense.photo_paths.map((filename, index) => (
-                <Image
+                <TouchableOpacity
                   key={index}
-                  source={{ uri: expenseAPI.getPhotoUrl(filename) }}
-                  style={styles.receiptPhoto}
-                />
+                  onPress={() => {
+                    Alert.alert('Receipt Photo', `Filename: ${filename}\nURL: ${expenseAPI.getPhotoUrl(filename)}`);
+                  }}
+                >
+                  <Image
+                    source={{ uri: expenseAPI.getPhotoUrl(filename) }}
+                    style={styles.receiptPhoto}
+                  />
+                </TouchableOpacity>
               ))}
             </View>
           </View>
