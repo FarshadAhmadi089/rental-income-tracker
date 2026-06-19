@@ -501,4 +501,12 @@ export const expenseAPI = {
   getPhotoUrl: (filename: string): string => {
     return `${API_BASE_URL}/api/expenses/photo/${filename}`;
   },
+
+  /**
+   * Get storage statistics for receipt photos
+   */
+  getStorageStats: async () => {
+    const response = await api.get('/api/expenses/storage/stats');
+    return response.data;
+  },
 };

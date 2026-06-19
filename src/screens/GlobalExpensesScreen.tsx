@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { expenseAPI, userAPI } from '../services/api';
@@ -78,12 +79,26 @@ export default function GlobalExpensesScreen({ navigation }: GlobalExpensesScree
   const [selectedYear, setSelectedYear] = useState<number>(getCurrentFiscalYearPeriod().start.getFullYear() + 1);
   const [selectedQuarter, setSelectedQuarter] = useState<number>(0); // 0 = all quarters
 
+  // Photo viewer
+  const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
+  const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string>('');
+  const [storageStats, setStorageStats] = useState<{ total_files: number; total_size_mb: number } | null>(null);
+
   const loadUsers = async () => {
     try {
       const userData = await userAPI.listUsers();
       setUsers(userData);
     } catch (error) {
       console.error('❌ Failed to load users:', error);
+    }
+  };
+
+  const loadStorageStats = async () => {
+    try {
+      const stats = await expenseAPI.getStorageStats();
+      setStorageStats(stats);
+    } catch (error: any) {
+      console.error('❌ Failed to load storage stats:', error);
     }
   };
 
@@ -151,6 +166,7 @@ export default function GlobalExpensesScreen({ navigation }: GlobalExpensesScree
 
   useEffect(() => {
     loadUsers();
+    loadStorageStats();
   }, []);
 
   useEffect(() => {
@@ -220,14 +236,21 @@ export default function GlobalExpensesScreen({ navigation }: GlobalExpensesScree
         </View>
         {expense.photo_paths && expense.photo_paths.length > 0 && (
           <View style={styles.receiptPhotosContainer}>
-            <Text style={styles.receiptLabel}>📎 Receipts:</Text>
+            <Text style={styles.receiptLabel}>📎 Receipts ({expense.photo_paths.length}):</Text>
             <View style={styles.receiptPhotosRow}>
               {expense.photo_paths.map((filename, index) => (
-                <Image
+                <TouchableOpacity
                   key={index}
-                  source={{ uri: expenseAPI.getPhotoUrl(filename) }}
-                  style={styles.receiptPhoto}
-                />
+                  onPress={() => {
+                    setSelectedPhotoUrl(expenseAPI.getPhotoUrl(filename));
+                    setPhotoViewerVisible(true);
+                  }}
+                >
+                  <Image
+                    source={{ uri: expenseAPI.getPhotoUrl(filename) }}
+                    style={styles.receiptPhoto}
+                  />
+                </TouchableOpacity>
               ))}
             </View>
           </View>
@@ -264,6 +287,11 @@ export default function GlobalExpensesScreen({ navigation }: GlobalExpensesScree
         <Text style={styles.subtitle}>
           {expenses.length} expense{expenses.length !== 1 ? 's' : ''} • {formatCurrency(totalExpenses)}
         </Text>
+        {storageStats && (
+          <Text style={styles.storageInfo}>
+            📎 {storageStats.total_files} photo{storageStats.total_files !== 1 ? 's' : ''} • {storageStats.total_size_mb} MB
+          </Text>
+        )}
       </View>
 
       {/* Filters */}
@@ -348,6 +376,28 @@ export default function GlobalExpensesScreen({ navigation }: GlobalExpensesScree
           )}
         </ScrollView>
       )}
+
+      {/* Photo Viewer Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={photoViewerVisible}
+        onRequestClose={() => setPhotoViewerVisible(false)}
+      >
+        <View style={styles.photoViewerOverlay}>
+          <TouchableOpacity
+            style={styles.photoViewerCloseButton}
+            onPress={() => setPhotoViewerVisible(false)}
+          >
+            <Text style={styles.photoViewerCloseText}>✕ Close</Text>
+          </TouchableOpacity>
+          <Image
+            source={{ uri: selectedPhotoUrl }}
+            style={styles.photoViewerImage}
+            resizeMode="contain"
+          />
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -379,6 +429,12 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#DBEAFE',
+  },
+  storageInfo: {
+    fontSize: 12,
+    color: '#DBEAFE',
+    marginTop: 4,
+    opacity: 0.8,
   },
   filtersContainer: {
     backgroundColor: '#FFFFFF',
@@ -558,5 +614,30 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 8,
     backgroundColor: '#F3F4F6',
+  },
+  photoViewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoViewerCloseButton: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    zIndex: 10,
+  },
+  photoViewerCloseText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  photoViewerImage: {
+    width: '100%',
+    height: '100%',
   },
 });

@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(test:*)",
+      "Bash(git push:*)",
+      "Bash(npm start)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(find:*)",
+      "Bash(python migrate_db.py:*)",
+      "Bash(npx expo install react-native-chart-kit react-native-svg)",
+      "Bash(python migrate_last_seen.py:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(git pull:*)",
+      "Bash(npm install:*)",
+      "Bash(npx expo install:*)",
+      "Bash(ssh root@api.takamul-cars.com \"cd /root/rental-income-backend && git pull && sudo systemctl restart rental-income-backend && sudo systemctl status rental-income-backend | head -15\")",
+      "Bash(git restore:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

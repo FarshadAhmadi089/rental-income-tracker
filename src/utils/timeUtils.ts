@@ -11,15 +11,23 @@ export function formatLastSeen(lastSeenString: string | null | undefined): {
   }
 
   try {
-    const lastSeen = new Date(lastSeenString);
+    // Fix: Backend sends UTC time without "Z" marker
+    // JavaScript interprets strings without "Z" as local time, causing timezone issues
+    // Solution: Add "Z" if the string doesn't already have a timezone marker
+    let normalizedString = lastSeenString;
+    if (!lastSeenString.endsWith('Z') && !lastSeenString.includes('+') && !lastSeenString.includes('-', 10)) {
+      normalizedString = lastSeenString.replace(/(\.\d+)?$/, '') + 'Z';
+    }
+
+    const lastSeen = new Date(normalizedString);
     const now = new Date();
     const diffMs = now.getTime() - lastSeen.getTime();
     const diffMinutes = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMinutes / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    // < 5 minutes ago → "Active now" (green)
-    if (diffMinutes < 5) {
+    // < 2 minutes ago → "Active now" (green)
+    if (diffMinutes < 2) {
       return { text: 'Active now', color: '#10B981' }; // Green
     }
 

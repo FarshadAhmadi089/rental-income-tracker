@@ -12,6 +12,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth, type UserRole } from '../contexts/AuthContext';
 import { userAPI } from '../services/api';
 import { formatLastSeen } from '../utils/timeUtils';
@@ -89,11 +90,25 @@ export default function TeamManagementScreen({ navigation }: TeamManagementScree
   };
 
   /**
-   * Fetch users on component mount
+   * Fetch users when screen is focused and set up auto-refresh
+   * Stops polling when user navigates away
    */
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      // Initial fetch when screen becomes focused
+      fetchUsers();
+
+      // Auto-refresh every 30 seconds while screen is focused
+      const interval = setInterval(() => {
+        fetchUsers();
+      }, 30000); // 30 seconds
+
+      // Cleanup: stop polling when screen loses focus or unmounts
+      return () => {
+        clearInterval(interval);
+      };
+    }, [])
+  );
 
   const handleInviteUser = async () => {
     // Validate inputs
