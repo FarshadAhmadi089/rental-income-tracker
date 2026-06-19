@@ -382,3 +382,60 @@ export const paymentAPI = {
     await api.delete(`/api/payments/${paymentId}`);
   },
 };
+
+/**
+ * Expense API Endpoints
+ */
+export const expenseAPI = {
+  /**
+   * Create a new expense (All authenticated users)
+   */
+  createExpense: async (expenseData: {
+    name: string;
+    amount: number;
+    expense_date: string;
+  }) => {
+    const response = await api.post('/api/expenses/', expenseData);
+    return response.data;
+  },
+
+  /**
+   * Get current user's own expenses
+   */
+  getMyExpenses: async () => {
+    const response = await api.get('/api/expenses/me');
+    return response.data;
+  },
+
+  /**
+   * Get ALL expenses with filters (Admin only)
+   */
+  getAllExpenses: async (filters?: {
+    user_id?: string;
+    year?: number;
+    quarter?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.user_id) params.append('user_id', filters.user_id);
+    if (filters?.year) params.append('year', filters.year.toString());
+    if (filters?.quarter) params.append('quarter', filters.quarter.toString());
+
+    const response = await api.get(`/api/expenses/?${params.toString()}`);
+    return response.data;
+  },
+
+  /**
+   * Get a specific expense by ID
+   */
+  getExpense: async (expenseId: string) => {
+    const response = await api.get(`/api/expenses/${expenseId}`);
+    return response.data;
+  },
+
+  /**
+   * Delete an expense (own or admin)
+   */
+  deleteExpense: async (expenseId: string) => {
+    await api.delete(`/api/expenses/${expenseId}`);
+  },
+};

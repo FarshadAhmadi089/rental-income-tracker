@@ -305,19 +305,37 @@ export default function DashboardScreen({ navigation }: DashboardScreenProps) {
           </View>
         </View>
 
-        {/* Title & Report Button */}
+        {/* Title & Buttons */}
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.title}>Rental Income</Text>
             <Text style={styles.subtitle}>{totalTenants} Tenants</Text>
           </View>
-          <TouchableOpacity
-            style={styles.reportButton}
-            onPress={() => setModalVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.reportButtonText}>📊 Report</Text>
-          </TouchableOpacity>
+          <View style={styles.headerButtonsRow}>
+            <TouchableOpacity
+              style={styles.expensesButton}
+              onPress={() => navigation.navigate('Expenses')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.expensesButtonText}>💰</Text>
+            </TouchableOpacity>
+            {user?.role === 'admin' && (
+              <TouchableOpacity
+                style={styles.expensesButton}
+                onPress={() => navigation.navigate('GlobalExpenses')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.expensesButtonText}>📋</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.reportButton}
+              onPress={() => setModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.reportButtonText}>📊</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -605,16 +623,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  headerButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  expensesButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  expensesButtonText: {
+    fontSize: 18,
+  },
   reportButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
   },
   reportButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 18,
   },
   title: {
     fontSize: 28,

@@ -1,0 +1,576 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { expenseAPI } from '../services/api';
+import { getCurrentFiscalYearPeriod, getFiscalQuarter, getQuarterLabel } from '../utils/rentCalculations';
+import type { Expense } from '../models';
+
+interface ExpensesScreenProps {
+  navigation: any;
+}
+
+interface GroupedExpenses {
+  quarter: number;
+  label: string;
+  expenses: Expense[];
+  total: number;
+}
+
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-AE', {
+    style: 'currency',
+    currency: 'AED',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+};
+
+const getRoleBadgeColor = (role?: string): string => {
+  if (!role) return '#9CA3AF';
+  switch (role.toLowerCase()) {
+    case 'admin':
+      return '#EF4444';
+    case 'rent_collector':
+      return '#2563EB';
+    default:
+      return '#6B7280';
+  }
+};
+
+const formatRole = (role?: string): string => {
+  if (!role) return 'Unknown';
+  switch (role.toLowerCase()) {
+    case 'admin':
+      return 'Admin';
+    case 'rent_collector':
+      return 'Rent Collector';
+    default:
+      return 'Spectator';
+  }
+};
+
+export default function ExpensesScreen({ navigation }: ExpensesScreenProps) {
+  const insets = useSafeAreaInsets();
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [groupedExpenses, setGroupedExpenses] = useState<GroupedExpenses[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newExpense, setNewExpense] = useState({
+    name: '',
+    amount: '',
+    expense_date: new Date().toISOString().split('T')[0],
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const loadExpenses = async () => {
+    try {
+      console.log('📊 Loading my expenses...');
+      const data = await expenseAPI.getMyExpenses();
+      console.log(`✅ Loaded ${data.length} expenses`);
+      setExpenses(data);
+      groupExpensesByQuarter(data);
+    } catch (error: any) {
+      console.error('❌ Failed to load expenses:', error);
+      Alert.alert('Error', 'Failed to load expenses. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const groupExpensesByQuarter = (expensesList: Expense[]) => {
+    const fiscalYear = getCurrentFiscalYearPeriod();
+
+    // Filter expenses within current fiscal year
+    const currentYearExpenses = expensesList.filter(expense => {
+      const expenseDate = new Date(expense.expense_date);
+      return expenseDate >= fiscalYear.start && expenseDate <= fiscalYear.end;
+    });
+
+    // Group by quarter
+    const quarters: { [key: number]: Expense[] } = { 1: [], 2: [], 3: [], 4: [] };
+
+    currentYearExpenses.forEach(expense => {
+      const expenseDate = new Date(expense.expense_date);
+      const quarter = getFiscalQuarter(expenseDate.getMonth());
+      quarters[quarter].push(expense);
+    });
+
+    // Create grouped data
+    const grouped: GroupedExpenses[] = [];
+    for (let q = 1; q <= 4; q++) {
+      if (quarters[q].length > 0) {
+        const total = quarters[q].reduce((sum, exp) => sum + exp.amount, 0);
+        grouped.push({
+          quarter: q,
+          label: getQuarterLabel(q),
+          expenses: quarters[q].sort((a, b) =>
+            new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime()
+          ),
+          total,
+        });
+      }
+    }
+
+    setGroupedExpenses(grouped);
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadExpenses();
+    }, [])
+  );
+
+  useEffect(() => {
+    loadExpenses();
+  }, []);
+
+  const handleAddExpense = async () => {
+    if (!newExpense.name.trim()) {
+      Alert.alert('Error', 'Please enter an expense name');
+      return;
+    }
+
+    if (!newExpense.amount || parseFloat(newExpense.amount) <= 0) {
+      Alert.alert('Error', 'Please enter a valid amount');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await expenseAPI.createExpense({
+        name: newExpense.name.trim(),
+        amount: parseFloat(newExpense.amount),
+        expense_date: newExpense.expense_date,
+      });
+
+      setModalVisible(false);
+      setNewExpense({
+        name: '',
+        amount: '',
+        expense_date: new Date().toISOString().split('T')[0],
+      });
+
+      await loadExpenses();
+      Alert.alert('Success', 'Expense added successfully');
+    } catch (error: any) {
+      console.error('❌ Failed to add expense:', error);
+      Alert.alert('Error', 'Failed to add expense. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteExpense = (expense: Expense) => {
+    Alert.alert(
+      'Delete Expense',
+      `Delete "${expense.name}" (${formatCurrency(expense.amount)})?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await expenseAPI.deleteExpense(expense.id);
+              await loadExpenses();
+              Alert.alert('Success', 'Expense deleted');
+            } catch (error: any) {
+              console.error('❌ Failed to delete expense:', error);
+              Alert.alert('Error', 'Failed to delete expense');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderExpense = (expense: Expense) => {
+    const roleColor = getRoleBadgeColor(expense.created_by_role);
+
+    return (
+      <View key={expense.id} style={styles.expenseCard}>
+        <View style={styles.expenseMain}>
+          <View style={styles.expenseInfo}>
+            <Text style={styles.expenseName}>{expense.name}</Text>
+            <Text style={styles.expenseDate}>{formatDate(expense.expense_date)}</Text>
+            <View style={[styles.roleBadge, { backgroundColor: roleColor + '20' }]}>
+              <Text style={[styles.roleText, { color: roleColor }]}>
+                {formatRole(expense.created_by_role)}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.expenseRight}>
+            <Text style={styles.expenseAmount}>{formatCurrency(expense.amount)}</Text>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => handleDeleteExpense(expense)}
+            >
+              <Text style={styles.deleteButtonText}>🗑️</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderQuarterSection = (group: GroupedExpenses) => (
+    <View key={group.quarter} style={styles.quarterSection}>
+      <View style={styles.quarterHeader}>
+        <Text style={styles.quarterLabel}>{group.label}</Text>
+        <Text style={styles.quarterTotal}>{formatCurrency(group.total)}</Text>
+      </View>
+      {group.expenses.map(renderExpense)}
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>My Expenses</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text style={styles.loadingText}>Loading expenses...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>My Expenses</Text>
+        <Text style={styles.subtitle}>
+          {expenses.length} expense{expenses.length !== 1 ? 's' : ''} • {formatCurrency(totalExpenses)}
+        </Text>
+      </View>
+
+      {/* Content */}
+      <ScrollView style={styles.content}>
+        {groupedExpenses.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No expenses recorded yet</Text>
+            <Text style={styles.emptySubtext}>Tap "Add Expense" to get started</Text>
+          </View>
+        ) : (
+          groupedExpenses.map(renderQuarterSection)
+        )}
+        <View style={{ height: 100 }} />
+      </ScrollView>
+
+      {/* Add Expense Button */}
+      <TouchableOpacity
+        style={[styles.addButton, { bottom: 20 + insets.bottom }]}
+        onPress={() => setModalVisible(true)}
+      >
+        <Text style={styles.addButtonText}>+ Add Expense</Text>
+      </TouchableOpacity>
+
+      {/* Add Expense Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add Expense</Text>
+
+            <Text style={styles.inputLabel}>Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., Cleaning, Maintenance"
+              value={newExpense.name}
+              onChangeText={(text) => setNewExpense({ ...newExpense, name: text })}
+              editable={!isSubmitting}
+            />
+
+            <Text style={styles.inputLabel}>Amount (AED)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0.00"
+              value={newExpense.amount}
+              onChangeText={(text) => setNewExpense({ ...newExpense, amount: text })}
+              keyboardType="decimal-pad"
+              editable={!isSubmitting}
+            />
+
+            <Text style={styles.inputLabel}>Date</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="YYYY-MM-DD"
+              value={newExpense.expense_date}
+              onChangeText={(text) => setNewExpense({ ...newExpense, expense_date: text })}
+              editable={!isSubmitting}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setModalVisible(false)}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.submitButton]}
+                onPress={handleAddExpense}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Add</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  header: {
+    backgroundColor: '#2563EB',
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  backButton: {
+    marginBottom: 12,
+  },
+  backButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#DBEAFE',
+  },
+  content: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 80,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
+  quarterSection: {
+    marginTop: 16,
+    marginHorizontal: 16,
+  },
+  quarterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  quarterLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E40AF',
+  },
+  quarterTotal: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1E40AF',
+  },
+  expenseCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  expenseMain: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  expenseInfo: {
+    flex: 1,
+  },
+  expenseName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  expenseDate: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  roleBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  roleText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  expenseRight: {
+    alignItems: 'flex-end',
+  },
+  expenseAmount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  deleteButton: {
+    padding: 4,
+  },
+  deleteButtonText: {
+    fontSize: 20,
+  },
+  addButton: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    backgroundColor: '#2563EB',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#111827',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+  },
+  cancelButtonText: {
+    color: '#6B7280',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  submitButton: {
+    backgroundColor: '#2563EB',
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});

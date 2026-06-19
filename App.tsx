@@ -10,6 +10,8 @@ import {
   TenantDetailScreen,
   AddTenantScreen,
   TeamManagementScreen,
+  ExpensesScreen,
+  GlobalExpensesScreen,
 } from './src/screens';
 import CollectorStatsScreen from './src/screens/CollectorStatsScreen';
 
@@ -48,6 +50,8 @@ const AppStack = () => {
       <Stack.Screen name="AddTenant" component={AddTenantScreen} />
       <Stack.Screen name="TeamManagement" component={TeamManagementScreen} />
       <Stack.Screen name="CollectorStats" component={CollectorStatsScreen} />
+      <Stack.Screen name="Expenses" component={ExpensesScreen} />
+      <Stack.Screen name="GlobalExpenses" component={GlobalExpensesScreen} />
     </Stack.Navigator>
   );
 };
