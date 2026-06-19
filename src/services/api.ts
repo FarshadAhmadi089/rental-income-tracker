@@ -424,8 +424,17 @@ export const expenseAPI = {
     // IMPORTANT: Do NOT set Content-Type header manually!
     // Axios/fetch will automatically set it with the correct boundary:
     // Content-Type: multipart/form-data; boundary=----WebKitFormBoundary...
-    const response = await api.post('/api/expenses/', formData);
-    return response.data;
+    try {
+      const response = await api.post('/api/expenses/', formData);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ FormData upload failed, detailed error:', {
+        status: error.response?.status,
+        detail: error.response?.data?.detail,
+        message: error.message,
+      });
+      throw error;
+    }
   },
 
   /**
