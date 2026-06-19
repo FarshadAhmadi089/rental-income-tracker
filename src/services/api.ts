@@ -396,22 +396,44 @@ export const expenseAPI = {
     expense_date: string;
     photos?: { uri: string; name: string; type: string }[];
   }) => {
-    // Create FormData for multipart upload
+    // If no photos, send as JSON (simpler and works)
+    if (!expenseData.photos || expenseData.photos.length === 0) {
+      // Create FormData anyway to match backend expectations
+      const formData = new FormData();
+      formData.append('name', expenseData.name);
+      formData.append('amount', expenseData.amount.toString());
+      formData.append('expense_date', expenseData.expense_date);
+
+      const response = await api.post('/api/expenses/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    }
+
+    // Create FormData for multipart upload with photos
     const formData = new FormData();
     formData.append('name', expenseData.name);
     formData.append('amount', expenseData.amount.toString());
     formData.append('expense_date', expenseData.expense_date);
 
-    // Add photos if provided (max 2)
-    if (expenseData.photos && expenseData.photos.length > 0) {
-      expenseData.photos.forEach((photo) => {
-        formData.append('photos', {
-          uri: photo.uri,
-          name: photo.name,
-          type: photo.type,
-        } as any);
-      });
-    }
+    // Add photos (React Native specific format)
+    expenseData.photos.forEach((photo) => {
+      const fileExtension = photo.name.split('.').pop() || 'jpg';
+      formData.append('photos', {
+        uri: photo.uri,
+        name: photo.name,
+        type: photo.type || `image/${fileExtension}`,
+      } as any);
+    });
+
+    console.log('📤 Sending FormData with photos:', {
+      name: expenseData.name,
+      amount: expenseData.amount,
+      date: expenseData.expense_date,
+      photoCount: expenseData.photos.length,
+    });
 
     const response = await api.post('/api/expenses/', formData, {
       headers: {
