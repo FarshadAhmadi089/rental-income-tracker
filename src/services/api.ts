@@ -39,6 +39,13 @@ api.interceptors.request.use(
         config.headers.Authorization = `Bearer ${accessToken}`;
       }
 
+      // CRITICAL: If data is FormData, remove Content-Type header
+      // React Native will set it automatically with the correct boundary
+      if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+        console.log('🔄 Detected FormData - removed Content-Type header');
+      }
+
       // Enhanced logging
       console.log('📤 API Request:', {
         method: config.method?.toUpperCase(),
@@ -46,6 +53,7 @@ api.interceptors.request.use(
         baseURL: config.baseURL,
         fullURL: `${config.baseURL}${config.url}`,
         headers: config.headers,
+        isFormData: config.data instanceof FormData,
       });
     } catch (error) {
       console.error('❌ Error reading access token:', error);
@@ -432,17 +440,10 @@ export const expenseAPI = {
     });
 
     // Use separate endpoint for photo uploads
-    // CRITICAL for React Native:
-    // 1. Don't set Content-Type (let axios/RN handle it)
-    // 2. Disable transformRequest to prevent FormData -> JSON conversion
+    // The axios interceptor will detect FormData and remove Content-Type
+    // so React Native can set it with the correct boundary
     try {
-      const response = await api.post('/api/expenses/with-photos', formData, {
-        transformRequest: (data, headers) => {
-          // Don't transform - return FormData as-is
-          // React Native will handle the multipart encoding
-          return data;
-        },
-      });
+      const response = await api.post('/api/expenses/with-photos', formData);
       return response.data;
     } catch (error: any) {
       console.error('❌ FormData upload failed, detailed error:', {
