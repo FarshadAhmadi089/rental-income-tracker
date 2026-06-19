@@ -407,7 +407,7 @@ export const expenseAPI = {
       return response.data;
     }
 
-    // If WITH photos: Use multipart/form-data
+    // If WITH photos: Use multipart endpoint
     console.log('📤 Creating expense with photos (FormData)');
     const formData = new FormData();
     formData.append('name', expenseData.name);
@@ -431,10 +431,11 @@ export const expenseAPI = {
       photoCount: expenseData.photos.length,
     });
 
+    // Use separate endpoint for photo uploads
     // IMPORTANT: Do NOT set Content-Type header manually!
     // Axios will set it with the correct boundary automatically
     try {
-      const response = await api.post('/api/expenses/', formData);
+      const response = await api.post('/api/expenses/with-photos', formData);
       return response.data;
     } catch (error: any) {
       console.error('❌ FormData upload failed, detailed error:', {
