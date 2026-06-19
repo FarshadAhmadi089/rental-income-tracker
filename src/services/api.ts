@@ -432,10 +432,18 @@ export const expenseAPI = {
     });
 
     // Use separate endpoint for photo uploads
-    // IMPORTANT: Do NOT set Content-Type header manually!
-    // Axios will set it with the correct boundary automatically
+    // CRITICAL: Must explicitly set Content-Type to multipart/form-data for React Native
+    // AND disable transformRequest so axios doesn't convert FormData to JSON
     try {
-      const response = await api.post('/api/expenses/with-photos', formData);
+      const response = await api.post('/api/expenses/with-photos', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        transformRequest: (data, headers) => {
+          // Return data as-is, don't transform FormData to JSON
+          return data;
+        },
+      });
       return response.data;
     } catch (error: any) {
       console.error('❌ FormData upload failed, detailed error:', {
