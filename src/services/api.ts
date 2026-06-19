@@ -388,14 +388,36 @@ export const paymentAPI = {
  */
 export const expenseAPI = {
   /**
-   * Create a new expense (All authenticated users)
+   * Create a new expense with optional receipt photos (All authenticated users)
    */
   createExpense: async (expenseData: {
     name: string;
     amount: number;
     expense_date: string;
+    photos?: { uri: string; name: string; type: string }[];
   }) => {
-    const response = await api.post('/api/expenses/', expenseData);
+    // Create FormData for multipart upload
+    const formData = new FormData();
+    formData.append('name', expenseData.name);
+    formData.append('amount', expenseData.amount.toString());
+    formData.append('expense_date', expenseData.expense_date);
+
+    // Add photos if provided (max 2)
+    if (expenseData.photos && expenseData.photos.length > 0) {
+      expenseData.photos.forEach((photo) => {
+        formData.append('photos', {
+          uri: photo.uri,
+          name: photo.name,
+          type: photo.type,
+        } as any);
+      });
+    }
+
+    const response = await api.post('/api/expenses/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
@@ -437,5 +459,12 @@ export const expenseAPI = {
    */
   deleteExpense: async (expenseId: string) => {
     await api.delete(`/api/expenses/${expenseId}`);
+  },
+
+  /**
+   * Get photo URL for a receipt
+   */
+  getPhotoUrl: (filename: string): string => {
+    return `${API_BASE_URL}/api/expenses/photo/${filename}`;
   },
 };

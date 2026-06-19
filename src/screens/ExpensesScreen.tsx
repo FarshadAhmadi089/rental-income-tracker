@@ -9,9 +9,12 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { expenseAPI } from '../services/api';
 import { getCurrentFiscalYearPeriod, getFiscalQuarter, getQuarterLabel } from '../utils/rentCalculations';
 import type { Expense } from '../models';
@@ -80,6 +83,7 @@ export default function ExpensesScreen({ navigation }: ExpensesScreenProps) {
     amount: '',
     expense_date: new Date().toISOString().split('T')[0],
   });
+  const [selectedPhotos, setSelectedPhotos] = useState<{ uri: string; name: string; type: string }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadExpenses = async () => {
@@ -144,6 +148,80 @@ export default function ExpensesScreen({ navigation }: ExpensesScreenProps) {
     loadExpenses();
   }, []);
 
+  const compressImage = async (uri: string) => {
+    try {
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 1280 } }],  // Max width 1280px, maintains aspect ratio
+        { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      return manipResult.uri;
+    } catch (error) {
+      console.error('Failed to compress image:', error);
+      return uri;  // Return original if compression fails
+    }
+  };
+
+  const pickImageFromCamera = async () => {
+    if (selectedPhotos.length >= 2) {
+      Alert.alert('Limit Reached', 'Maximum 2 photos allowed per expense');
+      return;
+    }
+
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Camera permission is required to take photos');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: false,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const compressedUri = await compressImage(result.assets[0].uri);
+      setSelectedPhotos([...selectedPhotos, {
+        uri: compressedUri,
+        name: `receipt_${Date.now()}.jpg`,
+        type: 'image/jpeg',
+      }]);
+    }
+  };
+
+  const pickImageFromGallery = async () => {
+    if (selectedPhotos.length >= 2) {
+      Alert.alert('Limit Reached', 'Maximum 2 photos allowed per expense');
+      return;
+    }
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Gallery permission is required to choose photos');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: false,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const compressedUri = await compressImage(result.assets[0].uri);
+      setSelectedPhotos([...selectedPhotos, {
+        uri: compressedUri,
+        name: `receipt_${Date.now()}.jpg`,
+        type: 'image/jpeg',
+      }]);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setSelectedPhotos(selectedPhotos.filter((_, i) => i !== index));
+  };
+
   const handleAddExpense = async () => {
     if (!newExpense.name.trim()) {
       Alert.alert('Error', 'Please enter an expense name');
@@ -161,6 +239,7 @@ export default function ExpensesScreen({ navigation }: ExpensesScreenProps) {
         name: newExpense.name.trim(),
         amount: parseFloat(newExpense.amount),
         expense_date: newExpense.expense_date,
+        photos: selectedPhotos.length > 0 ? selectedPhotos : undefined,
       });
 
       setModalVisible(false);
@@ -169,6 +248,7 @@ export default function ExpensesScreen({ navigation }: ExpensesScreenProps) {
         amount: '',
         expense_date: new Date().toISOString().split('T')[0],
       });
+      setSelectedPhotos([]);
 
       await loadExpenses();
       Alert.alert('Success', 'Expense added successfully');
@@ -229,6 +309,20 @@ export default function ExpensesScreen({ navigation }: ExpensesScreenProps) {
             </TouchableOpacity>
           </View>
         </View>
+        {expense.photo_paths && expense.photo_paths.length > 0 && (
+          <View style={styles.receiptPhotosContainer}>
+            <Text style={styles.receiptLabel}>📎 Receipts:</Text>
+            <View style={styles.receiptPhotosRow}>
+              {expense.photo_paths.map((filename, index) => (
+                <Image
+                  key={index}
+                  source={{ uri: expenseAPI.getPhotoUrl(filename) }}
+                  style={styles.receiptPhoto}
+                />
+              ))}
+            </View>
+          </View>
+        )}
       </View>
     );
   };
@@ -334,6 +428,41 @@ export default function ExpensesScreen({ navigation }: ExpensesScreenProps) {
               onChangeText={(text) => setNewExpense({ ...newExpense, expense_date: text })}
               editable={!isSubmitting}
             />
+
+            <Text style={styles.inputLabel}>Receipt Photos (Optional, max 2)</Text>
+            <View style={styles.photoButtonsRow}>
+              <TouchableOpacity
+                style={styles.photoButton}
+                onPress={pickImageFromCamera}
+                disabled={isSubmitting || selectedPhotos.length >= 2}
+              >
+                <Text style={styles.photoButtonText}>📷 Take Photo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.photoButton}
+                onPress={pickImageFromGallery}
+                disabled={isSubmitting || selectedPhotos.length >= 2}
+              >
+                <Text style={styles.photoButtonText}>🖼️ Gallery</Text>
+              </TouchableOpacity>
+            </View>
+
+            {selectedPhotos.length > 0 && (
+              <View style={styles.photoPreviewContainer}>
+                {selectedPhotos.map((photo, index) => (
+                  <View key={index} style={styles.photoPreviewWrapper}>
+                    <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+                    <TouchableOpacity
+                      style={styles.removePhotoButton}
+                      onPress={() => removePhoto(index)}
+                      disabled={isSubmitting}
+                    >
+                      <Text style={styles.removePhotoText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -572,5 +701,75 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  photoButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  photoButton: {
+    flex: 1,
+    backgroundColor: '#EFF6FF',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  photoButtonText: {
+    color: '#1E40AF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  photoPreviewContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  photoPreviewWrapper: {
+    position: 'relative',
+  },
+  photoPreview: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#EF4444',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removePhotoText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  receiptPhotosContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  receiptLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  receiptPhotosRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  receiptPhoto: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
   },
 });

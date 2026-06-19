@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { expenseAPI, userAPI } from '../services/api';
@@ -217,6 +218,20 @@ export default function GlobalExpensesScreen({ navigation }: GlobalExpensesScree
             </TouchableOpacity>
           </View>
         </View>
+        {expense.photo_paths && expense.photo_paths.length > 0 && (
+          <View style={styles.receiptPhotosContainer}>
+            <Text style={styles.receiptLabel}>📎 Receipts:</Text>
+            <View style={styles.receiptPhotosRow}>
+              {expense.photo_paths.map((filename, index) => (
+                <Image
+                  key={index}
+                  source={{ uri: expenseAPI.getPhotoUrl(filename) }}
+                  style={styles.receiptPhoto}
+                />
+              ))}
+            </View>
+          </View>
+        )}
       </View>
     );
   };
@@ -522,5 +537,26 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     fontSize: 20,
+  },
+  receiptPhotosContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  receiptLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  receiptPhotosRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  receiptPhoto: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
   },
 });
