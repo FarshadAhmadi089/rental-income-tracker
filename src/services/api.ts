@@ -396,50 +396,35 @@ export const expenseAPI = {
     expense_date: string;
     photos?: { uri: string; name: string; type: string }[];
   }) => {
-    // If no photos, send as JSON (simpler and works)
-    if (!expenseData.photos || expenseData.photos.length === 0) {
-      // Create FormData anyway to match backend expectations
-      const formData = new FormData();
-      formData.append('name', expenseData.name);
-      formData.append('amount', expenseData.amount.toString());
-      formData.append('expense_date', expenseData.expense_date);
-
-      const response = await api.post('/api/expenses/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return response.data;
-    }
-
-    // Create FormData for multipart upload with photos
+    // Create FormData for multipart upload
     const formData = new FormData();
     formData.append('name', expenseData.name);
     formData.append('amount', expenseData.amount.toString());
     formData.append('expense_date', expenseData.expense_date);
 
-    // Add photos (React Native specific format)
-    expenseData.photos.forEach((photo) => {
-      const fileExtension = photo.name.split('.').pop() || 'jpg';
-      formData.append('photos', {
-        uri: photo.uri,
-        name: photo.name,
-        type: photo.type || `image/${fileExtension}`,
-      } as any);
-    });
+    // Add photos if provided (React Native specific format)
+    if (expenseData.photos && expenseData.photos.length > 0) {
+      expenseData.photos.forEach((photo) => {
+        const fileExtension = photo.name.split('.').pop() || 'jpg';
+        formData.append('photos', {
+          uri: photo.uri,
+          name: photo.name,
+          type: photo.type || `image/${fileExtension}`,
+        } as any);
+      });
 
-    console.log('📤 Sending FormData with photos:', {
-      name: expenseData.name,
-      amount: expenseData.amount,
-      date: expenseData.expense_date,
-      photoCount: expenseData.photos.length,
-    });
+      console.log('📤 Sending FormData with photos:', {
+        name: expenseData.name,
+        amount: expenseData.amount,
+        date: expenseData.expense_date,
+        photoCount: expenseData.photos.length,
+      });
+    }
 
-    const response = await api.post('/api/expenses/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    // IMPORTANT: Do NOT set Content-Type header manually!
+    // Axios/fetch will automatically set it with the correct boundary:
+    // Content-Type: multipart/form-data; boundary=----WebKitFormBoundary...
+    const response = await api.post('/api/expenses/', formData);
     return response.data;
   },
 
